@@ -1,28 +1,21 @@
 {
-  "name": "a2a-agent-platform",
+  "name": "a2a-agent-studio-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "A2A Agent Platform - Discovers and manages self-contained agents",
-  "main": "platform.ts",
+  "description": "A2A Agent Studio - Backend orchestrator. No dependencies here, just scripts.",
   "scripts": {
-    "dev": "tsx platform.ts",
-    "start": "node dist/platform.js",
-    "build": "tsc",
-    "agents:discover": "tsx -e \"import { discoverAgents } from './discovery'; discoverAgents().then(a => console.log(JSON.stringify(a, null, 2)))\""
-  },
-  "dependencies": {
-    "@a2a-js/sdk": "^0.3.13",
-    "cors": "^2.8.6",
-    "express": "^4.22.2",
-    "glob": "^10.5.0",
-    "js-yaml": "^4.1.1"
+    "install:all": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install && cd ../../agent-platform && npm install",
+    "install:agents": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install",
+    "install:platform": "cd agent-platform && npm install",
+    "start:ava": "cd agents/ava && npm start",
+    "start:charge-verification": "cd agents/charge-verification && npm start",
+    "start:card-replacement": "cd agents/card-replacement && npm start",
+    "start:agents": "npx concurrently \"npm run start:ava\" \"npm run start:charge-verification\" \"npm run start:card-replacement\"",
+    "start:mcp": "cd mcp-servers && npx tsx server.ts",
+    "start:platform": "cd agent-platform && npm start",
+    "start:all": "npx concurrently \"npm run start:agents\" \"npm run start:mcp\" \"npm run start:platform\""
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.11.5",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "concurrently": "^9.0.0"
   }
 }

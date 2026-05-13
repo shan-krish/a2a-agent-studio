@@ -19,13 +19,13 @@ interface RegistryAgent {
 }
 
 interface AgentWithStatus extends RegistryAgent {
-  status: 'online' | 'offline' | 'checking';
+  status: 'online' | 'offline';
   agentCard?: any;
   error?: string;
 }
 
 function loadRegistry(): RegistryAgent[] {
-  const registryPath = resolve(__dirname, 'registry.yaml');
+  const registryPath = resolve(__dirname, 'agent.registry.yaml');
   const content = readFileSync(registryPath, 'utf-8');
   const data = yaml.load(content) as { agents: RegistryAgent[] };
   return data.agents || [];
@@ -34,46 +34,17 @@ function loadRegistry(): RegistryAgent[] {
 // Discover agent via HTTP by fetching its Agent Card
 async function discoverAgent(agent: RegistryAgent): Promise<AgentWithStatus> {
   try {
-    // Try standard A2A agent card path
     const cardUrl = `${agent.url}/.well-known/agent-card.json`;
-    const response = await fetch(cardUrl, {
-      signal: AbortSignal.timeout(5000),
-    });
+    const response = await fetch(cardUrl, { signal: AbortSignal.timeout(5000) });
 
     if (response.ok) {
       const card = await response.json();
-      return {
-        ...agent,
-        status: 'online',
-        agentCard: card,
-      };
+      return { ...agent, status: 'online', agentCard: card };
     }
 
-    // Try alternate path
-    const altResponse = await fetch(`${agent.url}/.well-known/agent.json`, {
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (altResponse.ok) {
-      const card = await altResponse.json();
-      return {
-        ...agent,
-        status: 'online',
-        agentCard: card,
-      };
-    }
-
-    return {
-      ...agent,
-      status: 'offline',
-      error: `Agent card not found at ${cardUrl}`,
-    };
+    return { ...agent, status: 'offline', error: `Agent card not found` };
   } catch (error) {
-    return {
-      ...agent,
-      status: 'offline',
-      error: `Failed to connect: ${error}`,
-    };
+    return { ...agent, status: 'offline', error: `Connection failed` };
   }
 }
 
@@ -82,11 +53,11 @@ app.get('/api/agents', async (_req, res) => {
   try {
     const registry = loadRegistry();
     const agents = await Promise.all(registry.map(discoverAgent));
-    
+
     res.json({
       agents,
       timestamp: new Date().toISOString(),
-      totalFound: agents.length,
+      total: agents.length,
       online: agents.filter(a => a.status === 'online').length,
     });
   } catch (error) {
@@ -94,12 +65,12 @@ app.get('/api/agents', async (_req, res) => {
   }
 });
 
-// GET /api/agents/:id - Get specific agent info
+// GET /api/agents/:id - Get specific agent
 app.get('/api/agents/:id', async (req, res) => {
   try {
     const registry = loadRegistry();
     const agent = registry.find(a => a.id === req.params.id);
-    
+
     if (!agent) {
       return res.status(404).json({ error: 'Agent not found in registry' });
     }
@@ -113,22 +84,14 @@ app.get('/api/agents/:id', async (req, res) => {
 
 // Health check
 app.get('/health', (_req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'agent-platform',
-    port: PORT,
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ status: 'healthy', service: 'agent-platform', port: PORT });
 });
 
-// Start platform
+// Start
 app.listen(PORT, () => {
-  console.log(`🚀 Agent Platform running on http://localhost:${PORT}`);
-  console.log(`📡 Agent discovery: http://localhost:${PORT}/api/agents`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-  
-  // Show registered agents
   const registry = loadRegistry();
-  console.log(`\n📋 Registered agents (${registry.length}):`);
+  console.log(`🚀 Agent Platform running on http://localhost:${PORT}`);
+  console.log(`📡 Discovery API: http://localhost:${PORT}/api/agents`);
+  console.log(`📋 Registered agents: ${registry.length}`);
   registry.forEach(a => console.log(`   - ${a.name} (${a.url})`));
 });

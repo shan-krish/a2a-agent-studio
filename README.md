@@ -7,126 +7,105 @@ A professional Agent-to-Agent (A2A) protocol demonstration showcasing how AI age
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                    │
-│              Agent Registry │ Chat │ Trail               │
-└─────────────────────────┬───────────────────────────────┘
-                          │ HTTP
-┌─────────────────────────┴───────────────────────────────┐
-│                  Platform (Express)                      │
-│           YAML Registry → HTTP Discovery                 │
-└─────────────────────────┬───────────────────────────────┘
-                          │ A2A Protocol
-┌─────────────────────────┴───────────────────────────────┐
-│               Independent A2A Agents                     │
-│  ┌──────┐    ┌──────────────┐    ┌─────────────────┐    │
-│  │ AVA  │───▶│Charge Verify │───▶│Card Replacement │    │
-│  │:4000 │    │    :4001     │    │     :4002       │    │
-│  └──────┘    └──────────────┘    └────────┬────────┘    │
-└───────────────────────────────────────────┼─────────────┘
-                                            │ MCP Protocol
-                              ┌─────────────┼─────────────┐
-                              │         MCP Servers        │
-                              │  :4100 :4101 :4102 :4103   │
-                              └────────────────────────────┘
+backend/
+  agents/                    # Self-contained A2A agents (each has own package.json)
+    ava/                     # Advanced Virtual Assistant (port 4000)
+      src/agent.ts
+      package.json           # @a2a-js/sdk, express, openai
+    charge-verification/     # Charge investigation (port 4001)
+      src/agent.ts
+      package.json
+    card-replacement/        # Card replacement (port 4002)
+      src/agent.ts
+      package.json
+  mcp-servers/               # MCP tool servers (mock data)
+    server.ts                # Single MCP server (port 4100)
+    tools/                   # Tool implementations
+  agent-platform/            # Platform server
+    agent.registry.yaml      # Agent URLs (configure here)
+    server.ts                # Discovery via HTTP (port 3001)
+  package.json               # Root: zero deps, just scripts
+frontend/                    # Next.js UI (port 3000)
 ```
-
-## Components
-
-### Agents (Self-Contained, A2A SDK)
-
-Each agent is an independent A2A server using `@a2a-js/sdk`:
-
-| Agent | Port | Description |
-|-------|------|-------------|
-| **AVA** | 4000 | Advanced Virtual Assistant - Routes customer requests |
-| **Charge Verification** | 4001 | Investigates charges, handles disputes, detects fraud |
-| **Card Replacement** | 4002 | Processes card replacements via MCP tools |
-
-### MCP Servers (Mock Data)
-
-| Server | Port | Purpose |
-|--------|------|---------|
-| Address Confirmation | 4100 | Verify/update mailing address |
-| Delivery Method | 4101 | Standard/Express/Overnight shipping |
-| Replacement Reason | 4102 | Lost/Stolen/Damaged/Fraud |
-| Final Submission | 4103 | Submit replacement order |
-
-### Platform
-
-- **Port:** 3001
-- **Discovery:** Reads `registry.yaml`, fetches Agent Cards via HTTP
-- **API:** `GET /api/agents` returns all discovered agents with status
-
-### Frontend
-
-- **Port:** 3000
-- **UI:** 3-panel layout (Agent Registry, Chat, Communication Trail)
-- **Theme:** AmEx-inspired professional dark theme
 
 ## Quick Start
 
 ```bash
-# Install dependencies
-cd backend && npm install
-cd ../frontend && npm install
+# Install all dependencies
+cd backend && npm run install:all
 
-# Set OpenAI API key
+# Set OpenAI API key (optional - works without it using keyword matching)
 export OPENAI_API_KEY="sk-..."
 
-# Start backend (agents + MCP servers + platform)
-cd backend && npm run start:all
+# Start everything
+npm run start:all
+```
 
-# Start frontend (separate terminal)
+Or start individually:
+
+```bash
+# Terminal 1: Agents
+cd backend/agents/ava && npm start
+cd backend/agents/charge-verification && npm start
+cd backend/agents/card-replacement && npm start
+
+# Terminal 2: MCP Server
+cd backend/mcp-servers && npx tsx server.ts
+
+# Terminal 3: Platform
+cd backend/agent-platform && npm start
+
+# Terminal 4: Frontend
 cd frontend && npm run dev
 ```
 
-Open http://localhost:3000
+## How It Works
 
-## Agent Discovery
+### Agent Discovery
+1. Platform reads `agent-platform/agent.registry.yaml`
+2. For each agent URL, fetches `/.well-known/agent-card.json` via HTTP
+3. Returns discovered agents with online/offline status
 
-Agents are registered in `backend/registry.yaml`:
+### A2A Communication
+- Agents communicate via A2A JSON-RPC protocol
+- AVA routes to Charge Verification or Card Replacement
+- Charge Verification can escalate to Card Replacement for fraud
+- Card Replacement calls MCP tools for address/delivery/reason/submission
 
-```yaml
-agents:
-  - id: ava
-    name: AVA
-    url: http://localhost:4000
-    description: Central routing agent
-
-  - id: charge-verification
-    name: Charge Verification
-    url: http://localhost:4001
-    description: Charge investigation agent
-```
-
-The platform discovers agents by fetching their A2A Agent Cards via HTTP at `/.well-known/agent-card.json`. No filesystem scanning.
+### MCP Tools
+Mock data served via MCP protocol:
+- `get_mailing_address` → Customer address
+- `get_delivery_options` → Standard/Express/Overnight
+- `get_replacement_reasons` → Lost/Stolen/Damaged/Fraud
+- `submit_replacement` → Confirmation & tracking
 
 ## Demo Flow
 
-1. **Customer reports unrecognized charge** → AVA routes to Charge Verification
-2. **Charge Verification presents details** → Customer confirms or disputes
-3. **If fraud detected** → Delegates to Card Replacement with fraud flag
-4. **Card Replacement runs MCP tools** → Address → Delivery → Reason → Submit
-5. **Communication Trail shows every hop** with timestamps and durations
+1. Customer: "I don't recognize a charge of $299.99 from TechStore Pro"
+2. AVA → routes to Charge Verification
+3. Charge Verification → presents charge details, asks for confirmation
+4. Customer: "I never made this transaction, this is fraud"
+5. Charge Verification → escalates to Card Replacement
+6. Card Replacement → calls MCP tools → confirms replacement
 
 ![Full Flow](screenshots/full-flow.png)
 
 ## Key Design Decisions
 
-- **A2A SDK**: Agents use official `@a2a-js/sdk` with `AgentExecutor` pattern
-- **YAML Registry**: Platform discovers agents via HTTP, not filesystem
-- **Self-Contained**: Each agent is independent, can be deployed separately
-- **MCP for Tools**: Mock data served via MCP protocol for tool abstraction
-- **Real LLM**: OpenAI GPT-5.4-mini for intent classification and responses
-- **No Fallback**: Frontend only communicates via HTTP API
+- **Self-contained agents**: Each agent has its own `package.json` with all dependencies
+- **HTTP-only discovery**: Platform discovers agents via HTTP, no filesystem scanning
+- **YAML registry**: `agent.registry.yaml` configures agent URLs
+- **A2A SDK**: Official `@a2a-js/sdk` with `AgentExecutor` pattern
+- **MCP for tools**: Mock data served via MCP protocol
+- **Real LLM**: OpenAI integration (optional, falls back to keyword matching)
 
 ## Tech Stack
 
-- **Backend:** TypeScript, Express, @a2a-js/sdk, OpenAI
-- **Frontend:** Next.js 15, React, Tailwind CSS, shadcn/ui, Framer Motion, Zustand
-- **Protocol:** A2A (Agent-to-Agent), MCP (Model Context Protocol)
-- **Discovery:** YAML registry + HTTP Agent Card fetching
+- **Agents**: TypeScript, @a2a-js/sdk, Express, OpenAI
+- **Platform**: TypeScript, Express, js-yaml
+- **MCP**: TypeScript, Express
+- **Frontend**: Next.js 15, React, Tailwind CSS, shadcn/ui, Framer Motion
+- **Protocol**: A2A (Agent-to-Agent), MCP (Model Context Protocol)
 
 ## License
 

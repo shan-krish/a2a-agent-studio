@@ -1,0 +1,19 @@
+# Agent Registry
+# Platform discovers agents via HTTP by fetching their Agent Cards.
+# Add/remove agents here. Platform will discover them on startup.
+
+agents:
+  - id: ava
+    name: AVA
+    url: http://localhost:4000
+    description: Advanced Virtual Assistant - Central routing agent
+
+  - id: charge-verification
+    name: Charge Verification
+    url: http://localhost:4001
+    description: Investigates charges and handles disputes
+
+  - id: card-replacement
+    name: Card Replacement
+    url: http://localhost:4002
+    description: Handles card replacement workflow
