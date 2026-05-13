@@ -11,396 +11,197 @@
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
   
-  /* Professional AmEx Color Palette */
-  --color-navy-900: var(--navy-900);
-  --color-navy-800: var(--navy-800);
-  --color-navy-700: var(--navy-700);
-  --color-navy-600: var(--navy-600);
-  --color-navy-500: var(--navy-500);
-  --color-navy-400: var(--navy-400);
-  
-  /* Primary Brand Colors */
-  --color-amex-blue: var(--amex-blue);
-  --color-amex-navy: var(--amex-navy);
-  --color-amex-light: var(--amex-light);
-  
-  /* Accent Colors */
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-error: var(--error);
-  --color-muted: var(--muted);
-  
-  /* Agent Status Colors */
-  --color-agent-active: var(--agent-active);
-  --color-agent-idle: var(--agent-idle);
-  --color-agent-completed: var(--agent-completed);
-  
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  
-  --radius: 0.625rem;
-}
-
-:root {
-  /* Professional Navy Palette - deeper contrast for financial UI */
-  --navy-900: #0A1628;
-  --navy-800: #0D2137;
-  --navy-700: #132D4A;
-  --navy-600: #1A3F5C;
-  --navy-500: #2A5070;
-  --navy-400: #3B6E91;
+  /* AmEx Professional Color Palette */
+  --color-navy-900: #000000;
+  --color-navy-800: #0A0F1A;
+  --color-navy-700: #141C2B;
+  --color-navy-600: #1E2A3D;
+  --color-navy-500: #2A3A52;
+  --color-navy-400: #3D5068;
   
   /* AmEx Brand Colors */
-  --amex-blue: #006FCF;
-  --amex-navy: #003366;
-  --amex-light: #00A3E0;
+  --color-amex-blue: #006FCF;
+  --color-amex-navy: #003366;
+  --color-amex-light: #4DA3FF;
+  --color-amex-gold: #C5A55A;
   
-  /* Status Colors - Professional palette */
-  --success: #00A86B;
-  --warning: #FFB300;
-  --error: #FF3D00;
-  --muted: #8B9DAF;
+  /* Status Colors */
+  --color-success: #00A86B;
+  --color-warning: #FFB300;
+  --color-error: #E63946;
+  --color-muted: #6B7B8D;
   
   /* Agent Connection States */
-  --agent-active: #00A3E0;
-  --agent-idle: #8B9DAF;
-  --agent-completed: #00A86B;
+  --color-agent-active: #006FCF;
+  --color-agent-idle: #6B7B8D;
+  --color-agent-completed: #00A86B;
   
-  /* Base Colors - High contrast for readability */
-  --background: #0A1628;
+  /* Base Colors */
+  --background: #000000;
   --foreground: #FFFFFF;
-  --card: #0D2137;
+  --card: #0A0F1A;
   --card-foreground: #FFFFFF;
-  --popover: #0D2137;
+  --popover: #0A0F1A;
   --popover-foreground: #FFFFFF;
   --primary: #006FCF;
   --primary-foreground: #FFFFFF;
-  --secondary: #132D4A;
+  --secondary: #141C2B;
   --secondary-foreground: #F5F7FA;
-  --muted: #132D4A;
-  --muted-foreground: #8B9DAF;
-  --accent: #1A3F5C;
+  --muted: #141C2B;
+  --muted-foreground: #6B7B8D;
+  --accent: #1E2A3D;
   --accent-foreground: #FFFFFF;
-  --destructive: #FF3D00;
-  --border: #1A3F5C;
-  --input: #132D4A;
+  --destructive: #E63946;
+  --border: #1E2A3D;
+  --input: #141C2B;
   --ring: #006FCF;
+  
+  --radius: 0.375rem;
 }
 
+/* Dark theme */
 .dark {
-  /* Same colors in dark mode */
-  --navy-900: #0A1628;
-  --navy-800: #0D2137;
-  --navy-700: #132D4A;
-  --navy-600: #1A3F5C;
-  --navy-500: #2A5070;
-  --navy-400: #3B6E91;
-  
-  --amex-blue: #006FCF;
-  --amex-navy: #003366;
-  --amex-light: #00A3E0;
-  
-  --success: #00A86B;
-  --warning: #FFB300;
-  --error: #FF3D00;
-  --muted: #8B9DAF;
-  
-  --agent-active: #00A3E0;
-  --agent-idle: #8B9DAF;
-  --agent-completed: #00A86B;
-  
-  --background: #0A1628;
+  --background: #000000;
   --foreground: #FFFFFF;
-  --card: #0D2137;
+  --card: #0A0F1A;
   --card-foreground: #FFFFFF;
-  --popover: #0D2137;
+  --popover: #0A0F1A;
   --popover-foreground: #FFFFFF;
   --primary: #006FCF;
   --primary-foreground: #FFFFFF;
-  --secondary: #132D4A;
+  --secondary: #141C2B;
   --secondary-foreground: #F5F7FA;
-  --muted: #132D4A;
-  --muted-foreground: #8B9DAF;
-  --accent: #1A3F5C;
+  --muted: #141C2B;
+  --muted-foreground: #6B7B8D;
+  --accent: #1E2A3D;
   --accent-foreground: #FFFFFF;
-  --destructive: #FF3D00;
-  --border: #1A3F5C;
-  --input: #132D4A;
+  --destructive: #E63946;
+  --border: #1E2A3D;
+  --input: #141C2B;
   --ring: #006FCF;
 }
 
-@layer base {
-  * {
-    border-color: var(--border);
-    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
-  }
-  body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-sans);
-  }
-  html {
-    font-family: var(--font-sans);
-  }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar for dark theme */
+/* AmEx Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1rem; }
+
+.label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+/* AmEx Card Style */
+.card-amex {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+/* AmEx Button Styles */
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius);
+  transition: all 150ms ease;
+}
+
+.btn-primary:hover {
+  background: var(--amex-light);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius);
+  transition: all 150ms ease;
+}
+
+.btn-outline:hover {
+  background: var(--accent);
+  border-color: var(--muted-foreground);
+}
+
+/* Connection Line Animations */
+@keyframes pulse-line {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes dash-flow {
+  to { stroke-dashoffset: -20; }
+}
+
+.connection-line-idle {
+  stroke-dasharray: 4 4;
+  opacity: 0.4;
+}
+
+.connection-line-active {
+  animation: pulse-line 2s ease-in-out infinite;
+  stroke-dasharray: none;
+}
+
+.connection-line-completed {
+  stroke-dasharray: none;
+  opacity: 0.8;
+}
+
+/* Agent Status Indicators */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 111, 207, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(0, 111, 207, 0); }
+}
+
+.agent-active {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--navy-900);
-  border-radius: 3px;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--navy-600);
+  background: var(--border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--navy-500);
+  background: var(--muted-foreground);
 }
 
-/* Professional typography */
-.heading-1 {
-  font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-
-.heading-2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.3;
-}
-
-.heading-3 {
-  font-size: 1.125rem;
-  font-weight: 500;
-  letter-spacing: -0.015em;
-  line-height: 1.4;
-}
-
-.label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-
-.body-text {
-  font-size: 0.875rem;
-  font-weight: 400;
-  line-height: 1.6;
-}
-
-.caption {
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.5;
-  color: var(--muted-foreground);
-}
-
-/* Connection line animations for delegation routes */
-@keyframes connection-pulse {
-  0%, 100% { 
-    stroke-opacity: 0.6;
-    filter: drop-shadow(0 0 2px var(--amex-light));
-  }
-  50% { 
-    stroke-opacity: 1;
-    filter: drop-shadow(0 0 8px var(--amex-light));
-  }
-}
-
-.connection-line-idle {
-  stroke-dasharray: 4 4;
-  animation: dash-flow 20s linear infinite;
-}
-
-.connection-line-active {
-  stroke-dasharray: none;
-  animation: connection-pulse 1.5s ease-in-out infinite;
-  stroke: var(--agent-active);
-  stroke-width: 2.5;
-}
-
-.connection-line-completed {
-  stroke-dasharray: none;
-  stroke: var(--agent-completed);
-  stroke-width: 2;
-}
-
-@keyframes dash-flow {
-  to {
-    stroke-dashoffset: -40;
-  }
-}
-
-/* Agent node states */
-.agent-node {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.agent-node-active {
-  filter: drop-shadow(0 0 8px var(--agent-active));
-}
-
-.agent-node-idle {
-  opacity: 0.7;
-}
-
-/* Card styling - Clean, professional, no glassmorphism */
-.card-professional {
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-professional:hover {
-  border-color: var(--navy-500);
-}
-
-.card-professional.active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px var(--primary);
-}
-
-/* Input styling - Professional and clean */
-.input-professional {
-  background-color: var(--input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--foreground);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.input-professional:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
-  outline: none;
-}
-
-/* Button styling - Clear hierarchy */
-.btn-primary {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-  border-radius: var(--radius);
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-.btn-primary:hover {
-  background-color: var(--amex-light);
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background-color: var(--secondary);
-  border-color: var(--navy-500);
-}
-
-/* Status indicator - Minimal but clear */
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.status-indicator-active {
-  background-color: var(--success);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 30%, transparent);
-}
-
-.status-indicator-idle {
-  background-color: var(--muted);
-}
-
-.status-indicator-warning {
-  background-color: var(--warning);
-}
-
-/* Trail timeline - Clinical and informative */
-.trail-node {
-  position: relative;
-  padding-left: 24px;
-}
-
-.trail-node::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 24px;
-  bottom: -24px;
-  width: 2px;
-  background-color: var(--navy-600);
-}
-
-.trail-node:last-child::before {
-  display: none;
-}
-
-/* Animation utilities */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-up {
-  from { 
-    opacity: 0; 
-    transform: translateY(10px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-/* Subtle pulse for active elements */
-@keyframes subtle-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
-}
-
-.animate-subtle-pulse {
-  animation: subtle-pulse 2s ease-in-out infinite;
+/* Focus Styles */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

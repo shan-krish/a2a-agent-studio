@@ -185,18 +185,38 @@ export function AgentRegistry() {
             </div>
             
             {/* Status Legend */}
-            <div className="flex gap-3 mb-3 text-[10px]">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-0.5 bg-muted-foreground opacity-50" style={{ background: 'repeating-linear-gradient(90deg, #8B9DAF, #8B9DAF 2px, transparent 2px, transparent 4px)' }} />
-                <span className="text-muted-foreground">Idle</span>
+            <div className="space-y-2 mb-3">
+              {/* Connection Line Legend */}
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Connections</div>
+              <div className="flex gap-3 text-[10px]">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5" style={{ background: 'repeating-linear-gradient(90deg, #8B9DAF, #8B9DAF 2px, transparent 2px, transparent 4px)' }} />
+                  <span className="text-muted-foreground">Not established</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-amex-light" />
+                  <span className="text-muted-foreground">Active</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-success" />
+                  <span className="text-muted-foreground">Established</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-0.5 bg-amex-light" />
-                <span className="text-muted-foreground">Active</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-0.5 bg-success" />
-                <span className="text-muted-foreground">Completed</span>
+              {/* Agent Status Legend */}
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Agent Status</div>
+              <div className="flex gap-3 text-[10px]">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground" />
+                  <span className="text-muted-foreground">Idle</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-amex-blue" />
+                  <span className="text-muted-foreground">Active</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-success" />
+                  <span className="text-muted-foreground">Completed</span>
+                </div>
               </div>
             </div>
 
