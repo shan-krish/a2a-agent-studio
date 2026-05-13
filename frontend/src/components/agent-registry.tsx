@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Users, ChevronLeft, ChevronRight, Network } from 'lucide-react';
+import { Plus, Users, ChevronLeft, ChevronRight, Network, Loader2, AlertCircle } from 'lucide-react';
 import { useAgentStore } from '@/stores';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { AgentConnection } from '@/types';
 
 export function AgentRegistry() {
-  const { agents, connections, addAgent, activeAgent, setActiveAgent, delegationState } = useAgentStore();
+  const { agents, connections, addAgent, activeAgent, setActiveAgent, delegationState, error, isLoading } = useAgentStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newAgentUrl, setNewAgentUrl] = useState('');
@@ -50,9 +50,16 @@ export function AgentRegistry() {
 
   // Calculate connection status for each connection
   const getConnectionStatus = (source: string, target: string): 'idle' | 'active' | 'completed' => {
-    const connectionId = `${source}-${target}`;
-    if (delegationState.activeConnections.includes(connectionId)) return 'active';
-    if (delegationState.completedDelegations.includes(connectionId)) return 'completed';
+    const isActive = delegationState.activeConnections.some(
+      (c) => c.source === source && c.target === target
+    );
+    if (isActive) return 'active';
+    
+    const isCompleted = delegationState.completedDelegations.some(
+      (c) => c.source === source && c.target === target
+    );
+    if (isCompleted) return 'completed';
+    
     return 'idle';
   };
 
@@ -93,8 +100,34 @@ export function AgentRegistry() {
       {!isCollapsed && (
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-2">
-            <AnimatePresence>
-              {agents.map((agent, index) => (
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center p-4 text-muted-foreground text-sm">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Discovering agents...
+              </div>
+            )}
+            
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="p-3 bg-error/10 border border-error/20 rounded-md">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-error mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-error">Platform Not Running</p>
+                    <p className="text-xs text-muted-foreground mt-1">{error}</p>
+                    <p className="text-xs text-muted-foreground mt-2 font-mono">
+                      cd backend && npm run dev
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Agent List */}
+            {!isLoading && !error && (
+              <AnimatePresence>
+                {agents.map((agent, index) => (
                 <motion.div
                   key={agent.id}
                   initial={{ opacity: 0, y: -10 }}
@@ -174,7 +207,8 @@ export function AgentRegistry() {
                   </Card>
                 </motion.div>
               ))}
-            </AnimatePresence>
+              </AnimatePresence>
+            )}
           </div>
 
           {/* Dynamic Delegation Routes Diagram */}

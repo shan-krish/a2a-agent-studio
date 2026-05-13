@@ -23,57 +23,21 @@ interface AgentState {
   processTrailEvent: (event: TrailEvent) => void;
 }
 
-// Default agents for the demo - renamed Orchestrator to AVA
-const defaultAgents: Agent[] = [
-  {
-    id: 'ava',
-    name: 'AVA',
-    description: 'Advanced Virtual Assistant - Coordinates all agent interactions and manages task routing',
-    status: 'online',
-    color: '#006FCF',
-    skills: ['Task Routing', 'Agent Coordination', 'Response Synthesis'],
-    url: 'http://localhost:4000',
-    isActive: true,
-    lastActivity: new Date(),
-  },
-  {
-    id: 'charge-verification',
-    name: 'Charge Verification',
-    description: 'Handles charge inquiries, disputes, and transaction verification',
-    status: 'online',
-    color: '#00A3E0',
-    skills: ['Transaction Lookup', 'Charge Dispute', 'Refund Processing'],
-    url: 'http://localhost:4001',
-    isActive: false,
-    lastActivity: new Date(),
-  },
-  {
-    id: 'card-replacement',
-    name: 'Card Replacement',
-    description: 'Manages card replacement requests and activation',
-    status: 'online',
-    color: '#00A86B',
-    skills: ['Card Replacement', 'Expiry Management', 'Activation'],
-    url: 'http://localhost:4002',
-    isActive: false,
-    lastActivity: new Date(),
-  },
-];
-
+// Default connections between agents
 const defaultConnections: AgentConnection[] = [
-  { source: 'ava', target: 'charge-verification', label: 'delegates', status: 'idle', direction: 'source-to-target' },
-  { source: 'ava', target: 'card-replacement', label: 'delegates', status: 'idle', direction: 'source-to-target' },
+  { source: 'ava', target: 'charge-verification', status: 'idle' },
+  { source: 'ava', target: 'card-replacement', status: 'idle' },
+  { source: 'charge-verification', target: 'card-replacement', status: 'idle' },
 ];
 
 const initialDelegationState: DelegationState = {
-  currentDelegations: [],
   activeConnections: [],
   completedDelegations: [],
 };
 
 export const useAgentStore = create<AgentState>((set, get) => ({
-  agents: defaultAgents,
-  activeAgent: 'ava',
+  agents: [],
+  activeAgent: null,
   connections: defaultConnections,
   delegationState: initialDelegationState,
   isLoading: false,
@@ -100,7 +64,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   
   setLoading: (loading) => set({ isLoading: loading }),
   
-  setError: (error) => set({ error: null }),
+  setError: (error) => set({ error }),
 
   fetchAgents: async () => {
     set({ isLoading: true, error: null });
@@ -108,108 +72,111 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       const response = await fetch('/api/agents');
       if (response.ok) {
         const data = await response.json();
-        set({ agents: data.agents || defaultAgents });
+        if (data.error) {
+          // Platform returned an error
+          set({ 
+            agents: [], 
+            error: data.message || data.error,
+            isLoading: false 
+          });
+        } else {
+          set({ 
+            agents: data.agents || [], 
+            activeAgent: data.agents?.[0]?.id || null,
+            isLoading: false 
+          });
+        }
       } else {
-        // Use default agents if API fails
-        set({ agents: defaultAgents });
+        // API returned error status
+        const data = await response.json().catch(() => ({}));
+        set({ 
+          agents: [], 
+          error: data.message || 'Failed to fetch agents',
+          isLoading: false 
+        });
       }
     } catch (error) {
       console.error('Failed to fetch agents:', error);
-      set({ agents: defaultAgents });
-    } finally {
-      set({ isLoading: false });
+      set({ 
+        agents: [], 
+        error: 'Agent platform is not running. Please start the backend: cd backend && npm run dev',
+        isLoading: false 
+      });
     }
   },
 
-  // New delegation tracking methods
-  activateConnection: (source, target) =>
-    set((state) => {
-      const connectionId = `${source}-${target}`;
-      const updatedConnections = state.connections.map((conn) =>
-        conn.source === source && conn.target === target
-          ? { ...conn, status: 'active' as const, lastActivity: new Date() }
-          : conn
-      );
-      
-      const updatedAgents = state.agents.map((agent) =>
-        agent.id === source || agent.id === target
-          ? { ...agent, isActive: true, lastActivity: new Date() }
-          : agent
-      );
-
-      return {
-        connections: updatedConnections,
-        agents: updatedAgents,
-        delegationState: {
-          ...state.delegationState,
-          currentDelegations: [
-            ...state.delegationState.currentDelegations,
-            { source, target, status: 'active', lastActivity: new Date() },
-          ],
-          activeConnections: [...state.delegationState.activeConnections, connectionId],
-        },
-      };
-    }),
-
-  completeConnection: (source, target) =>
-    set((state) => {
-      const connectionId = `${source}-${target}`;
-      const updatedConnections = state.connections.map((conn) =>
-        conn.source === source && conn.target === target
-          ? { ...conn, status: 'completed' as const, lastActivity: new Date() }
-          : conn
-      );
-      
-      const updatedAgents = state.agents.map((agent) =>
-        agent.id === source || agent.id === target
-          ? { ...agent, isActive: false, lastActivity: new Date() }
-          : agent
-      );
-
-      return {
-        connections: updatedConnections,
-        agents: updatedAgents,
-        delegationState: {
-          ...state.delegationState,
-          activeConnections: state.delegationState.activeConnections.filter(
-            (id) => id !== connectionId
-          ),
-          completedDelegations: [...state.delegationState.completedDelegations, connectionId],
-        },
-      };
-    }),
-
-  updateAgentActivity: (agentId) =>
+  activateConnection: (source: string, target: string) => {
     set((state) => ({
-      agents: state.agents.map((agent) =>
-        agent.id === agentId
-          ? { ...agent, lastActivity: new Date() }
-          : agent
+      connections: state.connections.map((c) =>
+        c.source === source && c.target === target
+          ? { ...c, status: 'active' as const }
+          : c
       ),
-    })),
+      delegationState: {
+        ...state.delegationState,
+        activeConnections: [
+          ...state.delegationState.activeConnections,
+          { source, target, timestamp: new Date() },
+        ],
+      },
+    }));
+  },
 
-  processTrailEvent: (event) => {
+  completeConnection: (source: string, target: string) => {
+    set((state) => ({
+      connections: state.connections.map((c) =>
+        c.source === source && c.target === target
+          ? { ...c, status: 'completed' as const }
+          : c
+      ),
+      delegationState: {
+        ...state.delegationState,
+        activeConnections: state.delegationState.activeConnections.filter(
+          (c) => !(c.source === source && c.target === target)
+        ),
+        completedDelegations: [
+          ...state.delegationState.completedDelegations,
+          { source, target, timestamp: new Date() },
+        ],
+      },
+    }));
+  },
+
+  updateAgentActivity: (agentId: string) => {
+    set((state) => ({
+      agents: state.agents.map((a) =>
+        a.id === agentId
+          ? { ...a, isActive: true, lastActivity: new Date() }
+          : a
+      ),
+    }));
+  },
+
+  processTrailEvent: (event: TrailEvent) => {
     const state = get();
     
-    // Update connections based on trail events
-    if (event.type === 'agent-delegation' && event.targetAgent) {
-      state.activateConnection(event.sourceAgent, event.targetAgent);
-    }
-    
-    if (event.type === 'agent-response' || event.type === 'tool-result') {
-      // Find the most recent delegation and complete it
-      const recentDelegation = state.delegationState.currentDelegations.slice(-1)[0];
-      if (recentDelegation && recentDelegation.status === 'active') {
-        state.completeConnection(recentDelegation.source, recentDelegation.target);
-      }
-    }
-    
-    // Update agent activity
-    if (event.sourceAgent !== 'user') {
+    // Update agent activity based on trail events
+    if (event.sourceAgent) {
       state.updateAgentActivity(event.sourceAgent);
     }
     if (event.targetAgent) {
       state.updateAgentActivity(event.targetAgent);
+    }
+
+    // Handle delegation events
+    if (event.type === 'agent-delegation' && event.sourceAgent && event.targetAgent) {
+      state.activateConnection(event.sourceAgent, event.targetAgent);
+    }
+
+    // Handle response events (delegation complete)
+    if (event.type === 'agent-response' && event.sourceAgent) {
+      // Find any active connections from this agent and mark as completed
+      const activeConns = state.delegationState.activeConnections.filter(
+        (c) => c.source === event.sourceAgent
+      );
+      activeConns.forEach((conn) => {
+        state.completeConnection(conn.source, conn.target);
+      });
     }
   },
 }));

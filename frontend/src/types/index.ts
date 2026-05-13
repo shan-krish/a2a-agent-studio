@@ -66,9 +66,8 @@ export interface AgentConnection {
 }
 
 export interface DelegationState {
-  currentDelegations: AgentConnection[];
-  activeConnections: string[]; // Connection IDs that are currently active
-  completedDelegations: string[]; // Connection IDs that have completed
+  activeConnections: Array<{ source: string; target: string; timestamp: Date }>;
+  completedDelegations: Array<{ source: string; target: string; timestamp: Date }>;
 }
 
 // JSON-RPC types for A2A protocol
