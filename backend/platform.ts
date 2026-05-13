@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import { discoverAgents, getAgentById, AgentInfo } from './discovery';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import * as yaml from 'js-yaml';
 
 const app = express();
 const PORT = 3001;
@@ -8,25 +10,85 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
-// Store running agents
-const runningAgents = new Map<string, { pid: number; port: number }>();
+// Load registry from YAML
+interface RegistryAgent {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+}
 
-// GET /api/agents - Discover all available agents
-app.get('/api/agents', async (req, res) => {
+interface AgentWithStatus extends RegistryAgent {
+  status: 'online' | 'offline' | 'checking';
+  agentCard?: any;
+  error?: string;
+}
+
+function loadRegistry(): RegistryAgent[] {
+  const registryPath = resolve(__dirname, 'registry.yaml');
+  const content = readFileSync(registryPath, 'utf-8');
+  const data = yaml.load(content) as { agents: RegistryAgent[] };
+  return data.agents || [];
+}
+
+// Discover agent via HTTP by fetching its Agent Card
+async function discoverAgent(agent: RegistryAgent): Promise<AgentWithStatus> {
   try {
-    const result = await discoverAgents();
-    
-    // Update status for running agents
-    result.agents.forEach(agent => {
-      const running = runningAgents.get(agent.id);
-      if (running) {
-        agent.status = 'running';
-        agent.pid = running.pid;
-        agent.port = running.port;
-      }
+    // Try standard A2A agent card path
+    const cardUrl = `${agent.url}/.well-known/agent-card.json`;
+    const response = await fetch(cardUrl, {
+      signal: AbortSignal.timeout(5000),
     });
+
+    if (response.ok) {
+      const card = await response.json();
+      return {
+        ...agent,
+        status: 'online',
+        agentCard: card,
+      };
+    }
+
+    // Try alternate path
+    const altResponse = await fetch(`${agent.url}/.well-known/agent.json`, {
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (altResponse.ok) {
+      const card = await altResponse.json();
+      return {
+        ...agent,
+        status: 'online',
+        agentCard: card,
+      };
+    }
+
+    return {
+      ...agent,
+      status: 'offline',
+      error: `Agent card not found at ${cardUrl}`,
+    };
+  } catch (error) {
+    return {
+      ...agent,
+      status: 'offline',
+      error: `Failed to connect: ${error}`,
+    };
+  }
+}
+
+// GET /api/agents - Discover all agents via HTTP
+app.get('/api/agents', async (_req, res) => {
+  try {
+    const registry = loadRegistry();
+    const agents = await Promise.all(registry.map(discoverAgent));
     
-    res.json(result);
+    res.json({
+      agents,
+      timestamp: new Date().toISOString(),
+      totalFound: agents.length,
+      online: agents.filter(a => a.status === 'online').length,
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to discover agents' });
   }
@@ -35,50 +97,22 @@ app.get('/api/agents', async (req, res) => {
 // GET /api/agents/:id - Get specific agent info
 app.get('/api/agents/:id', async (req, res) => {
   try {
-    const agent = await getAgentById(req.params.id);
+    const registry = loadRegistry();
+    const agent = registry.find(a => a.id === req.params.id);
+    
     if (!agent) {
-      return res.status(404).json({ error: 'Agent not found' });
+      return res.status(404).json({ error: 'Agent not found in registry' });
     }
-    
-    const running = runningAgents.get(agent.id);
-    if (running) {
-      agent.status = 'running';
-      agent.pid = running.pid;
-      agent.port = running.port;
-    }
-    
-    res.json(agent);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to get agent info' });
-  }
-});
 
-// GET /api/agents/:id/card - Get agent card (A2A discovery)
-app.get('/api/agents/:id/card', async (req, res) => {
-  try {
-    const agent = await getAgentById(req.params.id);
-    if (!agent) {
-      return res.status(404).json({ error: 'Agent not found' });
-    }
-    
-    // Return A2A agent card
-    res.json({
-      name: agent.name,
-      description: agent.description,
-      url: agent.url,
-      version: agent.version,
-      capabilities: agent.capabilities,
-      skills: agent.skills,
-      defaultInputModes: agent.defaultInputModes,
-      defaultOutputModes: agent.defaultOutputModes,
-    });
+    const discovered = await discoverAgent(agent);
+    res.json(discovered);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get agent card' });
+    res.status(500).json({ error: 'Failed to discover agent' });
   }
 });
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
     service: 'agent-platform',
@@ -92,4 +126,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Agent Platform running on http://localhost:${PORT}`);
   console.log(`📡 Agent discovery: http://localhost:${PORT}/api/agents`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+  
+  // Show registered agents
+  const registry = loadRegistry();
+  console.log(`\n📋 Registered agents (${registry.length}):`);
+  registry.forEach(a => console.log(`   - ${a.name} (${a.url})`));
 });
