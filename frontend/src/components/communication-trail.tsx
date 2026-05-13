@@ -258,13 +258,41 @@ function TimelineNode({
           </div>
         )}
 
-        {/* Metadata Preview */}
-        {(event.metadata?.result != null) && (
+        {/* Input JSON */}
+        {(event.metadata?.input != null) && (
+          <details className="mt-2">
+            <summary className="text-[10px] text-amex-blue cursor-pointer hover:text-amex-light transition-colors font-medium">
+              ▼ Input (Request)
+            </summary>
+            <pre className="text-[10px] font-mono text-amex-light bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600 max-h-48 overflow-y-auto">
+              {typeof event.metadata.input === 'string' 
+                ? event.metadata.input 
+                : JSON.stringify(event.metadata.input, null, 2)}
+            </pre>
+          </details>
+        )}
+
+        {/* Output JSON */}
+        {(event.metadata?.output != null) && (
+          <details className="mt-1">
+            <summary className="text-[10px] text-success cursor-pointer hover:text-success/80 transition-colors font-medium">
+              ▲ Output (Response)
+            </summary>
+            <pre className="text-[10px] font-mono text-success bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600 max-h-48 overflow-y-auto">
+              {typeof event.metadata.output === 'string' 
+                ? event.metadata.output 
+                : JSON.stringify(event.metadata.output, null, 2)}
+            </pre>
+          </details>
+        )}
+
+        {/* Legacy: Metadata Result (backward compat) */}
+        {!event.metadata?.output && event.metadata?.result != null && (
           <details className="mt-2">
             <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               View Details
             </summary>
-            <pre className="text-[10px] font-mono text-success bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600">
+            <pre className="text-[10px] font-mono text-success bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600 max-h-48 overflow-y-auto">
               {JSON.stringify(event.metadata.result, null, 2)}
             </pre>
           </details>

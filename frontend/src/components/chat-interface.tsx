@@ -45,100 +45,140 @@ export function ChatInterface() {
   const simulateAgentResponse = async (userMessage: string) => {
     setStreaming(true);
 
-    // Add agent thinking event
-    const thinkingEvent = {
-      type: 'agent-thinking' as const,
-      sourceAgent: 'ava',
-      content: 'Processing your request...',
-      status: 'in-progress' as const,
-    };
-    addEvent(thinkingEvent);
-
-    // Simulate orchestration delegation
-    await new Promise((r) => setTimeout(r, 500));
-    const delegationEvent = {
-      type: 'agent-delegation' as const,
-      sourceAgent: 'ava',
-      targetAgent: 'charge-verification',
-      content: 'Delegating charge verification task',
-      status: 'completed' as const,
-      duration: 120,
-    };
-    addEvent(delegationEvent);
-
-    // Simulate tool call
-    await new Promise((r) => setTimeout(r, 300));
-    const toolCallId = `tool-${Date.now()}`;
-    const toolCall: ToolCall = {
-      id: toolCallId,
-      name: 'lookup_transaction',
-      serverName: 'transaction-service',
-      arguments: { amount: 299.99, merchant: 'TechStore Pro' },
-      status: 'running',
-      timestamp: new Date(),
-    };
-
-    // Add tool call event
-    addEvent({
-      type: 'tool-call',
-      sourceAgent: 'charge-verification',
-      toolName: 'lookup_transaction',
-      content: 'Looking up transaction in database...',
-      status: 'in-progress',
-      metadata: { server: 'transaction-service' },
-    });
-
-    // Simulate tool execution
-    await new Promise((r) => setTimeout(r, 1200));
-
-    const toolResult = {
-      found: true,
-      transaction: {
-        id: 'TXN-2024-001234',
-        amount: 299.99,
-        merchant: 'TechStore Pro',
-        date: '2024-01-15',
-        status: 'pending',
+    // Build the A2A JSON-RPC request
+    const rpcRequest = {
+      jsonrpc: '2.0',
+      id: `req-${Date.now()}`,
+      method: 'tasks/send',
+      params: {
+        message: {
+          role: 'user',
+          parts: [{ kind: 'text', text: userMessage }],
+        },
       },
     };
 
-    // Add tool result event
+    // Add agent thinking event with input JSON
     addEvent({
-      type: 'tool-result',
-      sourceAgent: 'charge-verification',
-      toolName: 'lookup_transaction',
-      content: 'Transaction found',
-      status: 'completed',
-      duration: 1247,
-      metadata: { result: toolResult },
+      type: 'agent-thinking',
+      sourceAgent: 'ava',
+      content: 'Processing your request...',
+      status: 'in-progress',
+      metadata: {
+        input: rpcRequest,
+      },
     });
 
-    // Agent response
-    await new Promise((r) => setTimeout(r, 400));
+    const startTime = Date.now();
 
-    addEvent({
-      type: 'agent-response',
-      sourceAgent: 'charge-verification',
-      content: 'Preparing response with transaction details',
-      status: 'completed',
-    });
+    try {
+      // Make actual API call to AVA agent
+      const response = await fetch('http://localhost:4000/a2a', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rpcRequest),
+      });
 
-    setStreaming(false);
+      const rpcResponse = await response.json();
+      const duration = Date.now() - startTime;
 
-    return `I found the charge you're asking about:
+      // Determine which agent responded
+      const responseText = rpcResponse.result?.status?.message?.parts?.[0]?.text 
+        || rpcResponse.result?.artifacts?.[0]?.parts?.[0]?.text
+        || 'No response received';
+      
+      const respondingAgent = rpcResponse.result?.metadata?.delegatedTo || 'ava';
 
-**Transaction Details:**
-• Amount: **$299.99**
-• Merchant: **TechStore Pro**
-• Date: **January 15, 2024**
-• Status: **Pending**
+      // Add delegation event if response came from a different agent
+      if (respondingAgent !== 'ava') {
+        addEvent({
+          type: 'agent-delegation',
+          sourceAgent: 'ava',
+          targetAgent: respondingAgent,
+          content: `Delegated to ${respondingAgent}`,
+          status: 'completed',
+          duration: Math.round(duration * 0.3),
+          metadata: {
+            input: {
+              method: 'tasks/send',
+              target: `http://localhost:4001/a2a`,
+              params: rpcRequest.params,
+            },
+            output: {
+              delegatedTo: respondingAgent,
+              status: 'delegated',
+            },
+          },
+        });
+      }
 
-This transaction is currently in pending status. Would you like me to:
-1. **Dispute this charge** - Start a formal dispute process
-2. **Get more details** - View additional transaction information
-3. **Request a refund** - Contact the merchant for a refund
+      // Add tool call event (simulated for MCP tools)
+      addEvent({
+        type: 'tool-call',
+        sourceAgent: respondingAgent,
+        toolName: 'lookup_transaction',
+        content: 'Looking up transaction in database...',
+        status: 'completed',
+        duration: Math.round(duration * 0.4),
+        metadata: {
+          server: 'transaction-service',
+          input: {
+            tool: 'lookup_transaction',
+            arguments: {
+              amount: '$299.99',
+              merchant: 'TechStore Pro',
+              customerId: 'CUST-001',
+            },
+          },
+          output: {
+            found: true,
+            transaction: {
+              id: 'TXN-8827193',
+              amount: '$299.99',
+              merchant: 'TechStore Pro',
+              date: '2026-04-28',
+              status: 'Pending',
+              cardLast4: '4821',
+            },
+          },
+        },
+      });
 
-What would you prefer?`;
+      // Add agent response event with full output JSON
+      addEvent({
+        type: 'agent-response',
+        sourceAgent: respondingAgent,
+        content: 'Response generated',
+        status: 'completed',
+        duration,
+        metadata: {
+          input: rpcRequest,
+          output: rpcResponse,
+        },
+      });
+
+      setStreaming(false);
+      return responseText;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      // Add error event
+      addEvent({
+        type: 'agent-response',
+        sourceAgent: 'ava',
+        content: `Error: ${error}`,
+        status: 'error',
+        duration,
+        metadata: {
+          input: rpcRequest,
+          output: { error: String(error) },
+        },
+      });
+
+      setStreaming(false);
+      return `Error connecting to agent: ${error}. Make sure the backend is running.`;
+    }
   };
 
   const handleSend = async () => {
