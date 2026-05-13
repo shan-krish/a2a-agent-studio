@@ -4,7 +4,7 @@
   "private": true,
   "description": "A2A Agent Studio - Backend orchestrator. No dependencies here, just scripts.",
   "scripts": {
-    "install:all": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install && cd ../../agent-platform && npm install",
+    "install:all": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install && cd ../../mcp-servers && npm install && cd ../agent-platform && npm install",
     "install:agents": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install",
     "install:platform": "cd agent-platform && npm install",
     "start:ava": "cd agents/ava && npm start",
