@@ -8,6 +8,8 @@ export interface Agent {
   color: string;
   skills: string[];
   url: string;
+  isActive?: boolean;
+  lastActivity?: Date;
 }
 
 export interface Message {
@@ -58,6 +60,15 @@ export interface AgentConnection {
   source: string;
   target: string;
   label?: string;
+  status?: 'idle' | 'active' | 'completed';
+  lastActivity?: Date;
+  direction?: 'source-to-target' | 'target-to-source' | 'bidirectional';
+}
+
+export interface DelegationState {
+  currentDelegations: AgentConnection[];
+  activeConnections: string[]; // Connection IDs that are currently active
+  completedDelegations: string[]; // Connection IDs that have completed
 }
 
 // JSON-RPC types for A2A protocol

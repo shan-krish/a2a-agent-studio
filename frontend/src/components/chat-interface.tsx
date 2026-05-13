@@ -1,8 +1,7 @@
 'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, ChevronDown, ChevronUp, Loader2, Wrench } from 'lucide-react';
+import { Send, Bot, User, ChevronDown, ChevronUp, Loader2, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import { useChatStore, useAgentStore, useTrailStore } from '@/stores';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,23 +46,25 @@ export function ChatInterface() {
     setStreaming(true);
 
     // Add agent thinking event
-    addEvent({
-      type: 'agent-thinking',
-      sourceAgent: 'orchestrator',
+    const thinkingEvent = {
+      type: 'agent-thinking' as const,
+      sourceAgent: 'ava',
       content: 'Processing your request...',
-      status: 'in-progress',
-    });
+      status: 'in-progress' as const,
+    };
+    addEvent(thinkingEvent);
 
     // Simulate orchestration delegation
     await new Promise((r) => setTimeout(r, 500));
-    addEvent({
-      type: 'agent-delegation',
-      sourceAgent: 'orchestrator',
+    const delegationEvent = {
+      type: 'agent-delegation' as const,
+      sourceAgent: 'ava',
       targetAgent: 'charge-verification',
       content: 'Delegating charge verification task',
-      status: 'completed',
+      status: 'completed' as const,
       duration: 120,
-    });
+    };
+    addEvent(delegationEvent);
 
     // Simulate tool call
     await new Promise((r) => setTimeout(r, 300));
@@ -169,7 +170,7 @@ What would you prefer?`;
       role: 'agent',
       agentId: 'charge-verification',
       agentName: 'Charge Verification',
-      agentColor: '#00D4FF',
+      agentColor: '#00A3E0',
     });
   };
 
@@ -186,34 +187,41 @@ What would you prefer?`;
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-navy-900">
+    <div className="flex-1 flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-navy-600 min-h-[60px]">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-navy-600 min-h-[64px] bg-navy-800/30">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold amex-gradient">A2A</span>
-            <span className="text-xl font-semibold text-foreground">Agent Studio</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-amex-blue to-amex-light bg-clip-text text-transparent">
+              A2A
+            </span>
+            <span className="text-lg font-medium text-foreground">Agent Studio</span>
           </div>
-          <div className="h-6 w-px bg-navy-600" />
-          <span className="text-sm text-muted-foreground">Powered by Agent-to-Agent Protocol</span>
+          <div className="h-5 w-px bg-navy-600" />
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amex-light" />
+            <span className="caption">Powered by Agent-to-Agent Protocol</span>
+          </div>
         </div>
 
         {/* Agent Selector */}
         <div className="relative">
           <Button
             variant="outline"
-            className="border-navy-600 bg-navy-800 hover:bg-navy-700"
+            className="border-navy-600 bg-navy-800 hover:bg-navy-700 text-foreground"
             onClick={() => setIsAgentSelectorOpen(!isAgentSelectorOpen)}
           >
-            <div
-              className="w-2 h-2 rounded-full mr-2"
-              style={{ backgroundColor: currentAgent?.color || '#006FCF' }}
-            />
-            {currentAgent?.name || 'Select Agent'}
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: currentAgent?.color || '#006FCF' }}
+              />
+              <span className="font-medium">{currentAgent?.name || 'Select Agent'}</span>
+            </div>
             {isAgentSelectorOpen ? (
-              <ChevronUp className="w-4 h-4 ml-2" />
+              <ChevronUp className="w-4 h-4 ml-2 text-muted-foreground" />
             ) : (
-              <ChevronDown className="w-4 h-4 ml-2" />
+              <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground" />
             )}
           </Button>
 
@@ -223,12 +231,13 @@ What would you prefer?`;
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="absolute right-0 top-full mt-2 w-48 bg-navy-800 border border-navy-600 rounded-lg shadow-lg z-50"
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-2 w-56 bg-navy-800 border border-navy-600 rounded-lg shadow-xl z-50 overflow-hidden"
               >
                 {agents.map((agent) => (
                   <button
                     key={agent.id}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-navy-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-navy-700 transition-colors ${
                       activeAgent === agent.id ? 'bg-navy-700' : ''
                     }`}
                     onClick={() => {
@@ -237,10 +246,25 @@ What would you prefer?`;
                     }}
                   >
                     <div
-                      className="w-2 h-2 rounded-full"
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: agent.color }}
                     />
-                    <span className="text-sm text-foreground">{agent.name}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {agent.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {agent.description.split(' ').slice(0, 4).join(' ')}...
+                      </span>
+                    </div>
+                    {agent.isActive && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-[8px] px-1.5 py-0 ml-auto bg-amex-light/10 text-amex-light"
+                      >
+                        Active
+                      </Badge>
+                    )}
                   </button>
                 ))}
               </motion.div>
@@ -250,23 +274,25 @@ What would you prefer?`;
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-4xl mx-auto">
+      <ScrollArea className="flex-1 p-5">
+        <div className="space-y-4 max-w-3xl mx-auto">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-64 text-center">
-              <Bot className="w-16 h-16 text-blue-500 mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
+              <div className="w-16 h-16 rounded-2xl bg-amex-blue/10 flex items-center justify-center mb-5">
+                <Bot className="w-8 h-8 text-amex-blue" />
+              </div>
+              <h3 className="heading-3 text-foreground mb-2">
                 Welcome to A2A Agent Studio
               </h3>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Ask a question about your account, charges, or cards. The orchestrator will delegate to the appropriate specialist agent.
+              <p className="caption mb-6 max-w-md">
+                Ask a question about your account, charges, or cards. AVA will delegate to the appropriate specialist agent.
               </p>
               <Button
                 variant="outline"
-                className="border-navy-600 text-muted-foreground hover:text-foreground"
+                className="border-navy-600 text-muted-foreground hover:text-foreground hover:bg-navy-800"
                 onClick={handleUseStarter}
               >
-                Try: &quot;{STARTER_MESSAGE}&quot;
+                Try: "{STARTER_MESSAGE}"
               </Button>
             </div>
           )}
@@ -275,60 +301,67 @@ What would you prefer?`;
             {messages.map((message, index) => (
               <motion.div
                 key={message.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.03 }}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl p-4 ${
+                  className={`max-w-[85%] rounded-xl p-4 ${
                     message.role === 'user'
-                      ? 'bg-navy-700 rounded-br-md'
-                      : 'bg-navy-800 rounded-bl-md border border-navy-600'
+                      ? 'bg-navy-700 rounded-br-sm'
+                      : 'bg-navy-800 border border-navy-600 rounded-bl-sm'
                   }`}
                 >
                   {/* Agent Badge */}
                   {message.role === 'agent' && message.agentName && (
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-navy-600/50">
                       <div
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: message.agentColor }}
                       />
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-navy-700 text-foreground"
-                      >
+                      <span className="text-[11px] font-medium text-foreground">
                         {message.agentName}
-                      </Badge>
+                      </span>
                     </div>
                   )}
 
                   {/* Message Content */}
-                  <div className="text-foreground text-sm whitespace-pre-wrap">
+                  <div className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
                     {message.content.split('\n').map((line, i) => {
                       // Handle bold
-                      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                      const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>');
+                      
                       // Handle bullet points
                       if (line.startsWith('•')) {
                         return (
-                          <div key={i} className="ml-2" dangerouslySetInnerHTML={{ __html: line }} />
+                          <div key={i} className="ml-3 flex items-start gap-2 my-1">
+                            <span className="text-amex-blue mt-0.5">•</span>
+                            <span dangerouslySetInnerHTML={{ __html: processedLine.substring(1) }} />
+                          </div>
                         );
                       }
                       // Handle numbered items
                       if (/^\d+\./.test(line)) {
-                        return (
-                          <div key={i} className="ml-2" dangerouslySetInnerHTML={{ __html: line }} />
-                        );
+                        const match = line.match(/^(\d+\.)\s*(.*)/);
+                        if (match) {
+                          return (
+                            <div key={i} className="ml-3 flex items-start gap-2 my-1">
+                              <span className="text-amex-blue font-medium">{match[1]}</span>
+                              <span dangerouslySetInnerHTML={{ __html: match[2] }} />
+                            </div>
+                          );
+                        }
                       }
                       return (
-                        <div key={i} dangerouslySetInnerHTML={{ __html: line || '&nbsp;' }} />
+                        <div key={i} dangerouslySetInnerHTML={{ __html: processedLine || '&nbsp;' }} className="my-1" />
                       );
                     })}
                   </div>
 
                   {/* Tool Calls */}
                   {message.toolCalls && message.toolCalls.length > 0 && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 pt-3 border-t border-navy-600/50 space-y-2">
                       {message.toolCalls.map((tc) => (
                         <ToolCallCard key={tc.id} toolCall={tc} />
                       ))}
@@ -336,7 +369,7 @@ What would you prefer?`;
                   )}
 
                   {/* Timestamp */}
-                  <div className="text-[10px] text-muted-foreground mt-2">
+                  <div className="text-[10px] text-muted-foreground mt-3 pt-2 border-t border-navy-600/30" suppressHydrationWarning>
                     {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
@@ -349,10 +382,10 @@ What would you prefer?`;
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center gap-2 text-muted-foreground"
+              className="flex items-center gap-3 text-muted-foreground py-2"
             >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Agent is thinking...</span>
+              <Loader2 className="w-4 h-4 animate-spin text-amex-blue" />
+              <span className="caption">AVA is coordinating response...</span>
             </motion.div>
           )}
 
@@ -361,21 +394,21 @@ What would you prefer?`;
       </ScrollArea>
 
       {/* Input Bar */}
-      <div className="p-4 border-t border-navy-600">
-        <div className="max-w-4xl mx-auto flex gap-2">
+      <div className="p-4 border-t border-navy-600 bg-navy-800/30">
+        <div className="max-w-3xl mx-auto flex gap-2">
           <Input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about charges, disputes, or card services..."
-            className="flex-1 bg-navy-800 border-navy-600 text-foreground placeholder:text-muted-foreground"
+            className="flex-1 bg-navy-800 border-navy-600 text-foreground placeholder:text-muted-foreground focus:border-amex-blue"
             disabled={isStreaming}
           />
           <Button
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
-            className="bg-blue-500 hover:bg-blue-400 text-white"
+            className="bg-amex-blue hover:bg-amex-light text-white px-4"
           >
             <Send className="w-4 h-4" />
           </Button>
@@ -391,39 +424,25 @@ function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   const getStatusIcon = () => {
     switch (toolCall.status) {
       case 'pending':
-        return <div className="w-4 h-4 rounded-full border-2 border-amber-400" />;
+        return <div className="w-3 h-3 rounded-full border-2 border-warning" />;
       case 'running':
-        return <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />;
+        return <Loader2 className="w-3 h-3 text-warning animate-spin" />;
       case 'completed':
-        return <div className="w-4 h-4 rounded-full bg-green-400" />;
+        return <CheckCircle className="w-3 h-3 text-success" />;
       case 'error':
-        return <div className="w-4 h-4 rounded-full bg-red-400" />;
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (toolCall.status) {
-      case 'pending':
-        return 'border-amber-400/30';
-      case 'running':
-        return 'border-amber-400/50';
-      case 'completed':
-        return 'border-green-400/30';
-      case 'error':
-        return 'border-red-400/30';
+        return <AlertCircle className="w-3 h-3 text-error" />;
     }
   };
 
   return (
-    <Card className={`bg-navy-900/50 ${getStatusColor()} border`}>
+    <Card className="bg-navy-900/50 border-navy-600">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 p-2 text-left"
+        className="w-full flex items-center gap-2 p-2.5 text-left hover:bg-navy-800/50 transition-colors"
       >
         {getStatusIcon()}
-        <Wrench className="w-3 h-3 text-purple-400" />
         <span className="text-xs font-mono text-foreground">{toolCall.name}</span>
-        <Badge variant="outline" className="text-[10px] ml-auto border-navy-600">
+        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-navy-600 text-muted-foreground ml-auto">
           {toolCall.serverName}
         </Badge>
         {isExpanded ? (
@@ -441,23 +460,23 @@ function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 space-y-2">
+            <div className="px-3 pb-3 space-y-2 border-t border-navy-600/50 pt-2">
               <div>
-                <span className="text-[10px] text-muted-foreground uppercase">Arguments</span>
-                <pre className="text-xs font-mono text-blue-300 bg-navy-900/50 p-2 rounded mt-1 overflow-x-auto">
+                <span className="label">Arguments</span>
+                <pre className="text-[11px] font-mono text-amex-light bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600/50">
                   {JSON.stringify(toolCall.arguments, null, 2)}
                 </pre>
               </div>
-              {(toolCall.result != null) && (
+              {toolCall.result != null && (
                 <div>
-                  <span className="text-[10px] text-muted-foreground uppercase">Result</span>
-                  <pre className="text-xs font-mono text-green-300 bg-navy-900/50 p-2 rounded mt-1 overflow-x-auto">
+                  <span className="label">Result</span>
+                  <pre className="text-[11px] font-mono text-success bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600/50">
                     {JSON.stringify(toolCall.result ?? '', null, 2)}
                   </pre>
                 </div>
               )}
               {toolCall.duration && (
-                <div className="text-[10px] text-muted-foreground">
+                <div className="caption">
                   Duration: {toolCall.duration}ms
                 </div>
               )}

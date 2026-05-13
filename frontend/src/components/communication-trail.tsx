@@ -1,6 +1,5 @@
 'use client';
-
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -13,6 +12,7 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from 'lucide-react';
 import { useTrailStore } from '@/stores';
 import { TrailEvent, TrailEventType } from '@/types';
@@ -20,17 +20,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { useState } from 'react';
 
 const eventTypeConfig: Record<
   TrailEventType,
   { icon: React.ElementType; color: string; label: string }
 > = {
-  'user-message': { icon: User, color: '#006FCF', label: 'User Message' },
-  'agent-thinking': { icon: Brain, color: '#FFB300', label: 'Thinking' },
-  'agent-delegation': { icon: ArrowRightLeft, color: '#00D4FF', label: 'Delegation' },
-  'tool-call': { icon: Wrench, color: '#9D4EDD', label: 'Tool Call' },
-  'tool-result': { icon: CheckCircle, color: '#00C853', label: 'Tool Result' },
+  'user-message': { icon: User, color: '#006FCF', label: 'User' },
+  'agent-thinking': { icon: Brain, color: '#FFB300', label: 'Processing' },
+  'agent-delegation': { icon: ArrowRightLeft, color: '#00A3E0', label: 'Delegation' },
+  'tool-call': { icon: Wrench, color: '#8B9DAF', label: 'Tool' },
+  'tool-result': { icon: CheckCircle, color: '#00A86B', label: 'Result' },
   'agent-response': { icon: MessageSquare, color: '#006FCF', label: 'Response' },
   error: { icon: AlertCircle, color: '#FF3D00', label: 'Error' },
 };
@@ -47,27 +46,34 @@ export function CommunicationTrail() {
     }
   }, [events]);
 
+  // Calculate stats
+  const delegationCount = events.filter((e) => e.type === 'agent-delegation').length;
+  const toolCallCount = events.filter((e) => e.type === 'tool-call').length;
+  const totalTime = events.reduce((acc, e) => acc + (e.duration || 0), 0);
+
   return (
     <motion.div
       initial={false}
-      animate={{ width: isCollapsed ? 60 : 360 }}
+      animate={{ width: isCollapsed ? 60 : 340 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="h-full bg-navy-900 border-l border-navy-600 flex flex-col overflow-hidden"
+      className="h-full bg-background border-l border-navy-600 flex flex-col overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-navy-600 min-h-[60px]">
+      <div className="flex items-center justify-between p-4 border-b border-navy-600 min-h-[64px]">
         {!isCollapsed && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3"
           >
-            <Activity className="w-5 h-5 text-green-400" />
-            <span className="font-semibold text-foreground">Communication Trail</span>
-            <div className="flex items-center gap-1 ml-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Live</span>
+            <Activity className="w-5 h-5 text-success" />
+            <div className="flex flex-col">
+              <span className="font-semibold text-foreground text-sm">Communication Trail</span>
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-subtle-pulse inline-block" />
+                Live • {events.length} events
+              </span>
             </div>
           </motion.div>
         )}
@@ -75,7 +81,7 @@ export function CommunicationTrail() {
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-navy-800"
         >
           {isCollapsed ? (
             <ChevronLeft className="w-4 h-4" />
@@ -90,10 +96,13 @@ export function CommunicationTrail() {
         <ScrollArea className="flex-1" ref={scrollRef}>
           <div className="p-4">
             {events.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-32 text-center">
-                <Activity className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center h-40 text-center">
+                <Activity className="w-8 h-8 text-muted-foreground mb-3 opacity-50" />
+                <p className="caption">
                   Communication events will appear here
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1 opacity-70">
+                  Start a conversation to see the trail
                 </p>
               </div>
             )}
@@ -101,7 +110,7 @@ export function CommunicationTrail() {
             <div className="relative">
               {/* Timeline Line */}
               {events.length > 0 && (
-                <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-navy-600" />
+                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-navy-600" />
               )}
 
               <AnimatePresence>
@@ -121,25 +130,26 @@ export function CommunicationTrail() {
 
       {/* Summary Stats */}
       {!isCollapsed && events.length > 0 && (
-        <div className="p-3 border-t border-navy-600">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-navy-800 rounded-lg p-2">
-              <div className="text-lg font-semibold text-blue-400">
-                {events.filter((e) => e.type === 'agent-delegation').length}
+        <div className="p-3 border-t border-navy-600 bg-navy-800/50">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-amex-light tabular-nums">
+                {delegationCount}
               </div>
-              <div className="text-[10px] text-muted-foreground uppercase">Delegations</div>
+              <div className="label">Delegations</div>
             </div>
-            <div className="bg-navy-800 rounded-lg p-2">
-              <div className="text-lg font-semibold text-purple-400">
-                {events.filter((e) => e.type === 'tool-call').length}
+            <div className="text-center">
+              <div className="text-lg font-semibold text-muted-foreground tabular-nums">
+                {toolCallCount}
               </div>
-              <div className="text-[10px] text-muted-foreground uppercase">Tool Calls</div>
+              <div className="label">Tools</div>
             </div>
-            <div className="bg-navy-800 rounded-lg p-2">
-              <div className="text-lg font-semibold text-green-400">
-                {events.reduce((acc, e) => acc + (e.duration || 0), 0)}ms
+            <div className="text-center">
+              <div className="text-lg font-semibold text-success tabular-nums flex items-center justify-center gap-0.5">
+                <Clock className="w-3 h-3" />
+                {totalTime}ms
               </div>
-              <div className="text-[10px] text-muted-foreground uppercase">Total Time</div>
+              <div className="label">Duration</div>
             </div>
           </div>
         </div>
@@ -163,19 +173,19 @@ function TimelineNode({
   const getStatusIndicator = () => {
     switch (event.status) {
       case 'pending':
-        return <div className="w-2 h-2 rounded-full border border-amber-400" />;
+        return <div className="w-2 h-2 rounded-full border border-warning" />;
       case 'in-progress':
         return (
           <motion.div
-            className="w-2 h-2 rounded-full bg-amber-400"
-            animate={{ scale: [1, 1.3, 1] }}
+            className="w-2 h-2 rounded-full bg-warning"
+            animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
           />
         );
       case 'completed':
-        return <CheckCircle className="w-3 h-3 text-green-400" />;
+        return <CheckCircle className="w-3 h-3 text-success" />;
       case 'error':
-        return <AlertCircle className="w-3 h-3 text-red-400" />;
+        return <AlertCircle className="w-3 h-3 text-error" />;
       default:
         return null;
     }
@@ -185,54 +195,52 @@ function TimelineNode({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="relative pl-10 pb-6"
+      transition={{ delay: index * 0.03, duration: 0.2 }}
+      className="relative pl-8 pb-5"
     >
       {/* Node Circle */}
       <div
-        className="absolute left-[8px] top-0 w-[16px] h-[16px] rounded-full flex items-center justify-center z-10"
-        style={{ backgroundColor: config.color }}
+        className="absolute left-[4px] top-0 w-[16px] h-[16px] rounded-full flex items-center justify-center z-10 border border-navy-600"
+        style={{ backgroundColor: `${config.color}15`, borderColor: config.color }}
       >
-        <Icon className="w-2.5 h-2.5 text-white" />
+        <Icon className="w-2.5 h-2.5" style={{ color: config.color }} />
       </div>
 
       {/* Content Card */}
-      <div className="bg-navy-800 rounded-lg p-3 border border-navy-600 hover:border-navy-500 transition-colors">
+      <div className="card-professional p-3 hover:border-navy-500 transition-colors">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="text-[10px] px-1.5 py-0"
-              style={{ backgroundColor: `${config.color}20`, color: config.color }}
+            <span 
+              className="text-[10px] font-medium uppercase tracking-wider"
+              style={{ color: config.color }}
             >
               {config.label}
-            </Badge>
+            </span>
             {getStatusIndicator()}
           </div>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[10px] text-muted-foreground tabular-nums" suppressHydrationWarning>
             {formatDistanceToNow(event.timestamp, { addSuffix: true })}
           </span>
         </div>
 
         {/* Delegation Info */}
         {event.type === 'agent-delegation' && (
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-1 text-xs">
-              <span className="text-blue-300">{event.sourceAgent}</span>
-              <ArrowRightLeft className="w-3 h-3 text-muted-foreground" />
-              <span className="text-cyan-400">{event.targetAgent}</span>
-            </div>
+          <div className="flex items-center gap-1.5 mb-2 py-1.5 px-2 bg-navy-800 rounded">
+            <div className="w-2 h-2 rounded-full bg-amex-blue" />
+            <span className="text-[11px] text-foreground font-medium">{event.sourceAgent}</span>
+            <ArrowRightLeft className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[11px] text-amex-light font-medium">{event.targetAgent}</span>
           </div>
         )}
 
         {/* Tool Call Info */}
         {event.type === 'tool-call' && event.toolName && (
-          <div className="flex items-center gap-2 mb-2">
-            <Wrench className="w-3 h-3 text-purple-400" />
-            <span className="text-xs font-mono text-purple-300">{event.toolName}</span>
+          <div className="flex items-center gap-2 mb-2 py-1 px-2 bg-navy-800 rounded">
+            <Wrench className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[11px] font-mono text-foreground">{event.toolName}</span>
             {(event.metadata?.server != null) && (
-              <Badge variant="outline" className="text-[10px] border-navy-600">
+              <Badge variant="outline" className="text-[9px] px-1 py-0 border-navy-600 ml-auto">
                 {String(event.metadata.server)}
               </Badge>
             )}
@@ -240,22 +248,23 @@ function TimelineNode({
         )}
 
         {/* Content */}
-        <p className="text-xs text-foreground">{event.content}</p>
+        <p className="text-[11px] text-foreground/90 leading-relaxed">{event.content}</p>
 
         {/* Duration */}
         {event.duration && (
-          <div className="text-[10px] text-muted-foreground mt-2">
-            Duration: {event.duration}ms
+          <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
+            <Clock className="w-2.5 h-2.5" />
+            <span>{event.duration}ms</span>
           </div>
         )}
 
         {/* Metadata Preview */}
         {(event.metadata?.result != null) && (
           <details className="mt-2">
-            <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
-              View Result
+            <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              View Details
             </summary>
-            <pre className="text-[10px] font-mono text-green-300 bg-navy-900/50 p-2 rounded mt-1 overflow-x-auto">
+            <pre className="text-[10px] font-mono text-success bg-navy-900 p-2 rounded mt-1 overflow-x-auto border border-navy-600">
               {JSON.stringify(event.metadata.result, null, 2)}
             </pre>
           </details>

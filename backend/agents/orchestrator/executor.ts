@@ -8,6 +8,7 @@ import {
   TrailEvent,
   A2AAgent 
 } from '../../shared/types';
+import { getLLMService, LLMService } from '../../shared/llm-service';
 import { v4 as uuidv4 } from 'uuid';
 
 // Define types required by AgentExecutor interface
@@ -33,24 +34,62 @@ const tasks: Map<string, Task> = new Map();
 const CHARGE_VERIFICATION_URL = 'http://localhost:4001';
 const CARD_REPLACEMENT_URL = 'http://localhost:4002';
 
-// Intent classification keywords
-const CHARGE_KEYWORDS = [
-  'charge', 'unrecognized', 'don\'t recognize', 'didn\'t make', 
-  'unauthorized', 'suspicious', 'fraud', 'dispute', 'transaction'
-];
-
-const CARD_KEYWORDS = [
-  'lost', 'stolen', 'replacement', 'new card', 'damaged', 'broken',
-  'need card', 'replace card', 'card replacement'
-];
+// Conversation history for LLM context
+const conversationHistories: Map<string, Array<{ role: 'user' | 'assistant'; content: string }>> = new Map();
 
 export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
+  private llmService: LLMService;
   
-  private classifyIntent(message: string): 'charge_verification' | 'card_replacement' | 'unknown' {
+  constructor() {
+    this.llmService = getLLMService();
+  }
+  
+  private async classifyIntent(message: string, taskId?: string): Promise<'charge_verification' | 'card_replacement' | 'unknown'> {
+    // Get conversation history for context
+    const history = taskId ? (conversationHistories.get(taskId) || []) : [];
+    const context = history.length > 0 
+      ? `Previous conversation: ${history.slice(-3).map(h => `${h.role}: ${h.content}`).join('; ')}`
+      : undefined;
+    
+    try {
+      const analysis = await this.llmService.analyzeIntent(message, context);
+      
+      // Map LLM intent to our intents
+      switch (analysis.intent) {
+        case 'charge_verification':
+        case 'charge_dispute':
+        case 'charge_confirmed':
+        case 'charge_denied':
+          return 'charge_verification';
+        case 'card_replacement':
+          return 'card_replacement';
+        default:
+          return 'unknown';
+      }
+    } catch (error) {
+      console.error('Intent classification failed, using fallback:', error);
+      // Fallback to simple keyword matching
+      return this.fallbackIntentClassification(message);
+    }
+  }
+  
+  private fallbackIntentClassification(message: string): 'charge_verification' | 'card_replacement' | 'unknown' {
     const lowerMessage = message.toLowerCase();
     
-    const chargeScore = CHARGE_KEYWORDS.filter(keyword => lowerMessage.includes(keyword)).length;
-    const cardScore = CARD_KEYWORDS.filter(keyword => lowerMessage.includes(keyword)).length;
+    // Charge-related keywords
+    const chargeKeywords = [
+      'charge', 'unrecognized', 'didn\'t make', 'unauthorized', 
+      'suspicious', 'fraud', 'dispute', 'transaction'
+    ];
+    
+    // Card-related keywords
+    const cardKeywords = [
+      'lost', 'stolen', 'replacement', 'new card', 'damaged', 'broken',
+      'need card', 'replace card', 'card replacement'
+    ];
+    
+    const chargeScore = chargeKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
+    const cardScore = cardKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     
     if (chargeScore > cardScore) {
       return 'charge_verification';
@@ -58,7 +97,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
       return 'card_replacement';
     }
     
-    // Default to charge verification for unrecognized charges
+    // Default to charge verification for unrecognized charges with dollar amounts
     if (lowerMessage.includes('$') && (lowerMessage.includes('from') || lowerMessage.includes('at'))) {
       return 'charge_verification';
     }
@@ -73,7 +112,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
   ): Promise<JsonRpcResponse> {
     emitTrail({
       type: 'delegation',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         targetAgent: agentUrl,
@@ -99,7 +138,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
       
       emitTrail({
         type: 'agent_action',
-        agent: 'orchestrator',
+        agent: 'ava',
         timestamp: new Date().toISOString(),
         data: {
           action: 'delegation_complete',
@@ -114,7 +153,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
       
       emitTrail({
         type: 'agent_action',
-        agent: 'orchestrator',
+        agent: 'ava',
         timestamp: new Date().toISOString(),
         data: {
           action: 'delegation_failed',
@@ -142,7 +181,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
     // Publish agent-thinking event
     eventBus.publish({
       type: 'agent_action',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         action: 'agent-thinking',
@@ -150,17 +189,23 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
       }
     });
 
-    // Classify intent
-    const intent = this.classifyIntent(userText);
+    // Update conversation history
+    let history = conversationHistories.get(taskId) || [];
+    history.push({ role: 'user', content: userText });
+    conversationHistories.set(taskId, history);
+
+    // Classify intent using LLM
+    const intent = await this.classifyIntent(userText, taskId);
 
     eventBus.publish({
       type: 'agent_action',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         action: 'intent_classified',
         intent,
-        userMessage: userText
+        userMessage: userText,
+        method: 'llm_analysis'
       }
     });
 
@@ -173,16 +218,28 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
         targetAgentUrl = CARD_REPLACEMENT_URL;
         break;
       default:
-        // Respond with help message
+        // Generate natural response using LLM
+        const helpResponse = await this.llmService.generateResponse(
+          `You are AVA, a customer service assistant. The user's request is unclear. 
+          Help them understand you can assist with charge disputes or card replacements.
+          Be friendly and clear.`,
+          userText,
+          history.slice(-5)
+        );
+        
         eventBus.publish({
           type: 'agent_response',
-          agent: 'orchestrator',
+          agent: 'ava',
           timestamp: new Date().toISOString(),
           data: {
             action: 'agent-response',
-            response: 'I can help you with charge disputes or card replacements. Could you please clarify what you need help with?'
+            response: helpResponse
           }
         });
+        
+        // Update history
+        history.push({ role: 'assistant', content: helpResponse });
+        conversationHistories.set(taskId, history);
         return;
     }
 
@@ -199,7 +256,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
 
     eventBus.publish({
       type: 'agent_delegation',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         action: 'agent-delegation',
@@ -216,7 +273,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
     // Publish delegation result
     eventBus.publish({
       type: 'agent_response',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         action: 'agent-response',
@@ -230,7 +287,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
     if (!task) {
       eventBus.publish({
         type: 'agent_action',
-        agent: 'orchestrator',
+        agent: 'ava',
         timestamp: new Date().toISOString(),
         data: {
           action: 'cancel_failed',
@@ -245,7 +302,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
 
     eventBus.publish({
       type: 'status_change',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         taskId,
@@ -260,7 +317,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
 
     emitTrail({
       type: 'agent_action',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         action: 'request_received',
@@ -321,7 +378,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
 
     emitTrail({
       type: 'status_change',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         taskId,
@@ -330,17 +387,23 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
       }
     });
 
-    // Classify the intent
-    const intent = this.classifyIntent(userMessage);
+    // Update conversation history
+    let history = conversationHistories.get(taskId) || [];
+    history.push({ role: 'user', content: userMessage });
+    conversationHistories.set(taskId, history);
+
+    // Classify the intent using LLM
+    const intent = await this.classifyIntent(userMessage, taskId);
     
     emitTrail({
       type: 'agent_action',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         action: 'intent_classified',
         intent,
-        userMessage
+        userMessage,
+        method: 'llm_analysis'
       }
     });
 
@@ -381,18 +444,32 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
         break;
 
       default:
-        // Unknown intent - ask for clarification
+        // Unknown intent - generate natural response using LLM
+        const clarificationResponse = await this.llmService.generateResponse(
+          `You are AVA, a customer service assistant. The user's request is unclear.
+          Help them understand you can assist with:
+          1. Charge disputes and verification
+          2. Card replacements
+          Ask them to clarify what they need help with.`,
+          userMessage,
+          history.slice(-5)
+        );
+        
         task.status = {
           state: 'working',
           message: {
             role: 'agent',
             parts: [{ 
               kind: 'text', 
-              text: 'I can help you with charge disputes or card replacements. Could you please clarify what you need help with?' 
+              text: clarificationResponse
             }]
           }
         };
         tasks.set(taskId, task);
+        
+        // Update history
+        history.push({ role: 'assistant', content: clarificationResponse });
+        conversationHistories.set(taskId, history);
         
         return {
           jsonrpc: '2.0',
@@ -472,7 +549,7 @@ export class OrchestratorExecutor implements A2AAgent, AgentExecutor {
 
     emitTrail({
       type: 'status_change',
-      agent: 'orchestrator',
+      agent: 'ava',
       timestamp: new Date().toISOString(),
       data: {
         taskId,

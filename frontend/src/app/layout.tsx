@@ -3,21 +3,23 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
+const inter = Inter({ 
+  variable: "--font-sans", 
+  subsets: ["latin"], 
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
+const jetbrainsMono = JetBrains_Mono({ 
+  variable: "--font-mono", 
+  subsets: ["latin"], 
   display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
   title: "A2A Agent Studio",
-  description: "Agent-to-Agent Protocol Studio - Professional AI Agent Communication Interface",
+  description: "Professional AI Agent Communication Interface - Agent-to-Agent Protocol",
 };
 
 export default function RootLayout({
@@ -37,7 +39,7 @@ export default function RootLayout({
         `}</style>
       </head>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-navy-900 text-foreground font-sans antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-background text-foreground font-sans antialiased`}
       >
         <TooltipProvider delay={300}>
           {children}

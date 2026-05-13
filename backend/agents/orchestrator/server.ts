@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
-    service: 'orchestrator-agent',
+    service: 'ava-agent',
     port: PORT,
     activeTasks: sseClients.size,
     timestamp: new Date().toISOString()
@@ -151,7 +151,7 @@ app.get('/methods', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Orchestrator Agent running on port ${PORT}`);
+  console.log(`AVA Agent running on port ${PORT}`);
   console.log(`Agent Card: http://localhost:${PORT}/.well-known/agent.json`);
   console.log(`A2A Endpoint: http://localhost:${PORT}/a2a`);
   console.log(`Health Check: http://localhost:${PORT}/health`);

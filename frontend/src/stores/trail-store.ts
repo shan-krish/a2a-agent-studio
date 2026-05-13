@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { TrailEvent } from '@/types';
+import { TrailEvent } from '../types';
+import { useAgentStore } from './agent-store';
 
 interface TrailState {
   events: TrailEvent[];
@@ -14,17 +15,21 @@ const generateId = () => Math.random().toString(36).substring(2, 15);
 export const useTrailStore = create<TrailState>((set, get) => ({
   events: [],
 
-  addEvent: (event) =>
+  addEvent: (event) => {
+    const newEvent: TrailEvent = {
+      ...event,
+      id: generateId(),
+      timestamp: new Date(),
+    };
+    
+    // Update agent store with delegation state
+    const agentStore = useAgentStore.getState();
+    agentStore.processTrailEvent(newEvent);
+    
     set((state) => ({
-      events: [
-        ...state.events,
-        {
-          ...event,
-          id: generateId(),
-          timestamp: new Date(),
-        },
-      ],
-    })),
+      events: [...state.events, newEvent],
+    }));
+  },
 
   updateEvent: (id, updates) =>
     set((state) => ({

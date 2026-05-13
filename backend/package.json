@@ -3,18 +3,18 @@
   "version": "1.0.0",
   "description": "A2A + MCP Agent Studio Backend for American Express card replacement and charge verification",
   "scripts": {
-    "start:orchestrator": "cd agents/orchestrator && npx tsx server.ts",
+    "start:ava": "cd agents/orchestrator && npx tsx server.ts",
     "start:charge-verification": "cd agents/charge-verification && npx tsx server.ts",
     "start:card-replacement": "cd agents/card-replacement && npx tsx server.ts",
     "start:address-confirmation": "cd mcp-servers/address-confirmation && npx tsx server.ts",
     "start:delivery-method": "cd mcp-servers/delivery-method && npx tsx server.ts",
     "start:replacement-reason": "cd mcp-servers/replacement-reason && npx tsx server.ts",
     "start:final-submission": "cd mcp-servers/final-submission && npx tsx server.ts",
-    "start:all": "concurrently \"npm run start:orchestrator\" \"npm run start:charge-verification\" \"npm run start:card-replacement\" \"npm run start:address-confirmation\" \"npm run start:delivery-method\" \"npm run start:replacement-reason\" \"npm run start:final-submission\"",
-    "start:agents": "concurrently \"npm run start:orchestrator\" \"npm run start:charge-verification\" \"npm run start:card-replacement\"",
+    "start:all": "concurrently \"npm run start:ava\" \"npm run start:charge-verification\" \"npm run start:card-replacement\" \"npm run start:address-confirmation\" \"npm run start:delivery-method\" \"npm run start:replacement-reason\" \"npm run start:final-submission\"",
+    "start:agents": "concurrently \"npm run start:ava\" \"npm run start:charge-verification\" \"npm run start:card-replacement\"",
     "start:mcp": "concurrently \"npm run start:address-confirmation\" \"npm run start:delivery-method\" \"npm run start:replacement-reason\" \"npm run start:final-submission\"",
     "build": "tsc",
-    "dev:orchestrator": "cd agents/orchestrator && npx tsx --watch server.ts",
+    "dev:ava": "cd agents/orchestrator && npx tsx --watch server.ts",
     "dev:charge-verification": "cd agents/charge-verification && npx tsx --watch server.ts",
     "dev:card-replacement": "cd agents/card-replacement && npx tsx --watch server.ts",
     "dev:address-confirmation": "cd mcp-servers/address-confirmation && npx tsx --watch server.ts",
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
+    "openai": "^6.37.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

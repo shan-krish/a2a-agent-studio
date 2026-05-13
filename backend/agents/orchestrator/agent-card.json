@@ -1,6 +1,6 @@
 {
-  "name": "Orchestrator Agent",
-  "description": "Central routing agent that directs customer requests to specialized agents (Charge Verification or Card Replacement)",
+  "name": "AVA",
+  "description": "AVA (Automated Virtual Assistant) - Central routing agent that directs customer requests to specialized agents (Charge Verification or Card Replacement)",
   "url": "http://localhost:4000",
   "version": "1.0.0",
   "capabilities": {

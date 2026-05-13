@@ -8,6 +8,7 @@ import {
   McpToolCall 
 } from '../../shared/types';
 import { createMcpClients, McpClient } from '../../shared/mcp-client';
+import { getLLMService, LLMService } from '../../shared/llm-service';
 import { v4 as uuidv4 } from 'uuid';
 
 // In-memory task storage
@@ -23,6 +24,7 @@ interface ReplacementWorkflowState {
   replacementReason?: string;
   reasonData?: any;
   chargeDetails?: any;
+  fraudFlag?: boolean;
 }
 
 const workflowStates: Map<string, ReplacementWorkflowState> = new Map();
@@ -44,18 +46,20 @@ const mockCustomer = {
 };
 
 export class CardReplacementExecutor implements A2AAgent {
-  
   private mcpClients: Record<string, McpClient>;
+  private llmService: LLMService;
   
   constructor() {
     this.mcpClients = createMcpClients('card-replacement');
+    this.llmService = getLLMService();
   }
-
+  
   private initializeWorkflow(taskId: string, metadata?: any): ReplacementWorkflowState {
     const state: ReplacementWorkflowState = {
       step: 'address',
       addressConfirmed: false,
-      chargeDetails: metadata?.chargeDetails
+      chargeDetails: metadata?.chargeDetails,
+      fraudFlag: metadata?.fraudFlag || false
     };
     
     workflowStates.set(taskId, state);
@@ -107,11 +111,18 @@ export class CardReplacementExecutor implements A2AAgent {
       step: 'address' 
     });
 
-    return `I've retrieved your current mailing address:\n\n` +
-           `Name: ${mockCustomer.name}\n` +
-           `Address: ${addressData.address.street}\n` +
-           `         ${addressData.address.city}, ${addressData.address.state} ${addressData.address.zip}\n\n` +
-           `Is this address correct for shipping your new card? Please confirm or provide a new address.`;
+    // Generate natural response using LLM
+    const state = this.getWorkflowState(taskId);
+    const isFraudCase = state?.fraudFlag || false;
+    
+    const response = await this.llmService.generateCardReplacementResponse(
+      'address_confirmation',
+      mockCustomer,
+      [{ role: 'user', content: 'Please confirm my address' }],
+      state?.chargeDetails
+    );
+
+    return response;
   }
 
   private async confirmAddress(
@@ -148,13 +159,15 @@ export class CardReplacementExecutor implements A2AAgent {
       step: 'delivery' 
     });
 
-    return `✅ Address confirmed successfully!\n\n` +
-           `Now, let's select the delivery method for your new card.\n\n` +
-           `Please choose from the following options:\n` +
-           `1. Standard (5-7 business days) - Free\n` +
-           `2. Express (2-3 business days) - $15.00\n` +
-           `3. Overnight (Next business day) - $25.00\n\n` +
-           `Which delivery method would you prefer?`;
+    // Generate natural response using LLM
+    const response = await this.llmService.generateCardReplacementResponse(
+      'delivery_method_selection',
+      mockCustomer,
+      [{ role: 'user', content: 'Address confirmed, show delivery options' }],
+      this.getWorkflowState(taskId)?.chargeDetails
+    );
+
+    return response;
   }
 
   private async executeDeliveryStep(
@@ -191,11 +204,16 @@ export class CardReplacementExecutor implements A2AAgent {
       step: 'delivery' 
     });
 
-    return `Please select a delivery method:\n\n` +
-           deliveryData.options.map((opt: any, idx: number) => 
-             `${idx + 1}. ${opt.name} (${opt.timeframe}) - ${opt.cost === 0 ? 'Free' : `$${opt.cost.toFixed(2)}`}`
-           ).join('\n') +
-           `\n\nPlease enter your choice (1, 2, or 3).`;
+    // Generate natural response using LLM
+    const state = this.getWorkflowState(taskId);
+    const response = await this.llmService.generateCardReplacementResponse(
+      'delivery_method_selection',
+      mockCustomer,
+      [{ role: 'user', content: 'Show delivery options' }],
+      state?.chargeDetails
+    );
+
+    return response;
   }
 
   private async selectDeliveryMethod(
@@ -232,15 +250,16 @@ export class CardReplacementExecutor implements A2AAgent {
       step: 'reason' 
     });
 
-    return `✅ Delivery method selected: ${result.content.deliveryMethod.name}\n\n` +
-           `Estimated delivery: ${result.content.estimatedDelivery}\n\n` +
-           `Now, please specify the reason for replacement:\n\n` +
-           `1. Lost - Card is lost and cannot be located\n` +
-           `2. Stolen - Card was stolen or used without authorization\n` +
-           `3. Damaged - Card is physically damaged and unreadable\n` +
-           `4. Fraud - Suspected fraudulent activity on the account\n` +
-           `5. Unrecognized Charge - Charge on account that is not recognized\n\n` +
-           `Please enter your choice (1-5).`;
+    // Generate natural response using LLM
+    const state = this.getWorkflowState(taskId);
+    const response = await this.llmService.generateCardReplacementResponse(
+      'replacement_reason_selection',
+      mockCustomer,
+      [{ role: 'user', content: 'Delivery method selected, show replacement reasons' }],
+      state?.chargeDetails
+    );
+
+    return response;
   }
 
   private async executeReasonStep(
@@ -271,11 +290,16 @@ export class CardReplacementExecutor implements A2AAgent {
 
     this.updateWorkflowState(taskId, { step: 'reason' });
 
-    return `Please select a reason for replacement:\n\n` +
-           result.content.reasons.map((r: any, idx: number) => 
-             `${idx + 1}. ${r.name} - ${r.description}`
-           ).join('\n') +
-           `\n\nPlease enter your choice (1-5).`;
+    // Generate natural response using LLM
+    const state = this.getWorkflowState(taskId);
+    const response = await this.llmService.generateCardReplacementResponse(
+      'replacement_reason_selection',
+      mockCustomer,
+      [{ role: 'user', content: 'Show replacement reasons' }],
+      state?.chargeDetails
+    );
+
+    return response;
   }
 
   private async selectReplacementReason(
@@ -315,23 +339,17 @@ export class CardReplacementExecutor implements A2AAgent {
 
     const state = this.getWorkflowState(taskId);
     const isUnrecognizedCharge = reasonId === 'unrecognized-charge' && state?.chargeDetails;
+    const isFraudCase = state?.fraudFlag || false;
 
-    return `✅ Reason selected: ${result.content.reason.name}\n\n` +
-           `${isUnrecognizedCharge ? 
-             `I see this is due to an unrecognized charge. I'll include the charge details in the dispute.\n\n` : 
-             ''}` +
-           `Let me summarize your replacement order:\n\n` +
-           `📦 Card Replacement Order Summary\n` +
-           `─────────────────────────────────\n` +
-           `Customer: ${mockCustomer.name}\n` +
-           `Card: ****${mockCustomer.card.lastFour}\n` +
-           `Reason: ${result.content.reason.name}\n` +
-           `Delivery: ${state?.deliveryData?.options?.find((o: any) => o.id === state.deliveryMethodId)?.name || 'Standard'}\n` +
-           `${isUnrecognizedCharge ? 
-             `Charge to dispute: $${state.chargeDetails.amount} from ${state.chargeDetails.merchant}\n` : 
-             ''}` +
-           `─────────────────────────────────\n\n` +
-           `Shall I submit this order? (yes/no)`;
+    // Generate natural response using LLM
+    const response = await this.llmService.generateCardReplacementResponse(
+      'order_summary_and_confirmation',
+      mockCustomer,
+      [{ role: 'user', content: `Reason selected: ${reasonId}. Show order summary.` }],
+      state?.chargeDetails
+    );
+
+    return response;
   }
 
   private async executeSubmission(
@@ -372,29 +390,15 @@ export class CardReplacementExecutor implements A2AAgent {
 
     this.updateWorkflowState(taskId, { step: 'complete' });
 
-    const order = result.content.order;
-    const chargeDisputed = result.content.chargeDisputed;
+    // Generate natural response using LLM
+    const response = await this.llmService.generateCardReplacementResponse(
+      'order_confirmation',
+      mockCustomer,
+      [{ role: 'user', content: 'Order submitted successfully' }],
+      state.chargeDetails
+    );
 
-    return `✅ Order submitted successfully!\n\n` +
-           `📋 Order Confirmation\n` +
-           `─────────────────────────────────\n` +
-           `Order ID: ${order.id}\n` +
-           `Confirmation: ${result.content.confirmationNumber}\n` +
-           `Status: ${order.status}\n` +
-           `Estimated Delivery: ${order.estimatedDelivery}\n` +
-           `${chargeDisputed ? 
-             `\n🔍 Charge Dispute\n` +
-             `Dispute ID: ${chargeDisputed.disputeId}\n` +
-             `Amount: $${chargeDisputed.amount}\n` +
-             `Status: ${chargeDisputed.disputeStatus}\n` : 
-             ''}` +
-           `─────────────────────────────────\n\n` +
-           `Next Steps:\n` +
-           result.content.nextSteps.map((step: string, idx: number) => `${idx + 1}. ${step}`).join('\n') + '\n\n' +
-           `Your new card ending in ${mockCustomer.card.lastFour} will be sent to:\n` +
-           `${mockCustomer.address.street}\n` +
-           `${mockCustomer.address.city}, ${mockCustomer.address.state} ${mockCustomer.address.zip}\n\n` +
-           `Thank you for using our service!`;
+    return response;
   }
 
   async handleTask(request: JsonRpcRequest, emitTrail: (event: TrailEvent) => void): Promise<JsonRpcResponse> {
@@ -446,10 +450,19 @@ export class CardReplacementExecutor implements A2AAgent {
     const taskId = params.taskId || uuidv4();
     const metadata = params.metadata || {};
     
+    // Check if this is a fraud case from charge verification
+    const isFraudCase = metadata.fraudFlag === true;
+    const chargeDetails = metadata.chargeDetails;
+    
     // Get or create workflow state
     let workflowState = this.getWorkflowState(taskId);
     if (!workflowState) {
       workflowState = this.initializeWorkflow(taskId, metadata);
+    } else if (chargeDetails && !workflowState.chargeDetails) {
+      // Update with charge details if this is a fraud escalation
+      workflowState.chargeDetails = chargeDetails;
+      workflowState.fraudFlag = isFraudCase;
+      workflowStates.set(taskId, workflowState);
     }
 
     const task: Task = {
@@ -475,97 +488,115 @@ export class CardReplacementExecutor implements A2AAgent {
         taskId,
         state: 'working',
         workflowStep: workflowState.step,
-        message: 'Processing card replacement request...'
+        message: isFraudCase ? 'Processing URGENT fraud case - card replacement...' : 'Processing card replacement request...'
       }
     });
 
     let responseMessage: string;
     const lowerMessage = userMessage.toLowerCase();
 
-    // Determine current step and process accordingly
-    switch (workflowState.step) {
-      case 'address':
-        if (lowerMessage === 'yes' || lowerMessage === 'confirm' || lowerMessage === 'y') {
-          responseMessage = await this.confirmAddress(
-            taskId, 
-            workflowState.addressData?.address || mockCustomer.address,
-            emitTrail
-          );
-        } else if (lowerMessage === 'no' || lowerMessage === 'update' || lowerMessage === 'change') {
-          responseMessage = `Please provide your new mailing address in the format:\n` +
-                          `Street Address, City, State ZIP\n\n` +
-                          `For example: 456 Oak Lane, Los Angeles, CA 90001`;
-        } else if (workflowState.addressData) {
-          // Assume they're providing a new address
-          responseMessage = await this.confirmAddress(
-            taskId,
-            this.parseAddress(userMessage),
-            emitTrail
-          );
-        } else {
+    // Handle fraud case specially - fast track
+    if (isFraudCase && workflowState.step === 'address' && !workflowState.addressConfirmed) {
+      // Fraud case - fast track to address confirmation
+      emitTrail({
+        type: 'agent_action',
+        agent: 'card-replacement',
+        timestamp: new Date().toISOString(),
+        data: {
+          action: 'fraud_case_detected',
+          fastTrack: true,
+          chargeDetails
+        }
+      });
+      
+      responseMessage = await this.executeAddressStep(taskId, emitTrail);
+      responseMessage = `🚨 FRAUD CASE DETECTED - PRIORITY REPLACEMENT 🚨\n\n${responseMessage}`;
+    } else {
+      // Determine current step and process accordingly
+      switch (workflowState.step) {
+        case 'address':
+          if (lowerMessage === 'yes' || lowerMessage === 'confirm' || lowerMessage === 'y') {
+            responseMessage = await this.confirmAddress(
+              taskId, 
+              workflowState.addressData?.address || mockCustomer.address,
+              emitTrail
+            );
+          } else if (lowerMessage === 'no' || lowerMessage === 'update' || lowerMessage === 'change') {
+            responseMessage = `Please provide your new mailing address in the format:\n` +
+                            `Street Address, City, State ZIP\n\n` +
+                            `For example: 456 Oak Lane, Los Angeles, CA 90001`;
+          } else if (workflowState.addressData) {
+            // Assume they're providing a new address
+            responseMessage = await this.confirmAddress(
+              taskId,
+              this.parseAddress(userMessage),
+              emitTrail
+            );
+          } else {
+            responseMessage = await this.executeAddressStep(taskId, emitTrail);
+          }
+          break;
+
+        case 'delivery':
+          // Handle delivery method selection
+          let deliveryMethodId: string;
+          if (lowerMessage === '1' || lowerMessage === 'standard') {
+            deliveryMethodId = 'standard';
+          } else if (lowerMessage === '2' || lowerMessage === 'express') {
+            deliveryMethodId = 'express';
+          } else if (lowerMessage === '3' || lowerMessage === 'overnight') {
+            deliveryMethodId = 'overnight';
+          } else if (workflowState.deliveryData) {
+            // Already have delivery data, assume they're selecting
+            responseMessage = await this.executeDeliveryStep(taskId, emitTrail);
+            break;
+          } else {
+            responseMessage = await this.executeDeliveryStep(taskId, emitTrail);
+            break;
+          }
+          
+          responseMessage = await this.selectDeliveryMethod(taskId, deliveryMethodId, emitTrail);
+          break;
+
+        case 'reason':
+          // Handle replacement reason selection
+          let reasonId: string;
+          if (lowerMessage === '1' || lowerMessage === 'lost') {
+            reasonId = 'lost';
+          } else if (lowerMessage === '2' || lowerMessage === 'stolen') {
+            reasonId = 'stolen';
+          } else if (lowerMessage === '3' || lowerMessage === 'damaged') {
+            reasonId = 'damaged';
+          } else if (lowerMessage === '4' || lowerMessage === 'fraud') {
+            reasonId = 'fraud';
+          } else if (lowerMessage === '5' || lowerMessage.includes('unrecognized')) {
+            reasonId = 'unrecognized-charge';
+          } else {
+            responseMessage = await this.executeReasonStep(taskId, emitTrail);
+            break;
+          }
+          
+          responseMessage = await this.selectReplacementReason(taskId, reasonId, emitTrail);
+          break;
+
+        case 'submission':
+          // Handle final confirmation
+          if (lowerMessage === 'yes' || lowerMessage === 'y' || lowerMessage === 'confirm' || lowerMessage === 'submit') {
+            responseMessage = await this.executeSubmission(taskId, emitTrail);
+          } else {
+            responseMessage = `Order cancelled. If you'd like to start over, please let me know.`;
+            this.updateWorkflowState(taskId, { step: 'address' });
+          }
+          break;
+
+        case 'complete':
+          responseMessage = `Your card replacement order has already been submitted. If you need to make changes, please contact customer service.`;
+          break;
+
+        default:
+          // Start from the beginning
           responseMessage = await this.executeAddressStep(taskId, emitTrail);
-        }
-        break;
-
-      case 'delivery':
-        // Handle delivery method selection
-        let deliveryMethodId: string;
-        if (lowerMessage === '1' || lowerMessage === 'standard') {
-          deliveryMethodId = 'standard';
-        } else if (lowerMessage === '2' || lowerMessage === 'express') {
-          deliveryMethodId = 'express';
-        } else if (lowerMessage === '3' || lowerMessage === 'overnight') {
-          deliveryMethodId = 'overnight';
-        } else if (workflowState.deliveryData) {
-          // Already have delivery data, assume they're selecting
-          responseMessage = await this.executeDeliveryStep(taskId, emitTrail);
-          break;
-        } else {
-          responseMessage = await this.executeDeliveryStep(taskId, emitTrail);
-          break;
-        }
-        
-        responseMessage = await this.selectDeliveryMethod(taskId, deliveryMethodId, emitTrail);
-        break;
-
-      case 'reason':
-        // Handle replacement reason selection
-        let reasonId: string;
-        if (lowerMessage === '1' || lowerMessage === 'lost') {
-          reasonId = 'lost';
-        } else if (lowerMessage === '2' || lowerMessage === 'stolen') {
-          reasonId = 'stolen';
-        } else if (lowerMessage === '3' || lowerMessage === 'damaged') {
-          reasonId = 'damaged';
-        } else if (lowerMessage === '4' || lowerMessage === 'fraud') {
-          reasonId = 'fraud';
-        } else if (lowerMessage === '5' || lowerMessage.includes('unrecognized')) {
-          reasonId = 'unrecognized-charge';
-        } else {
-          responseMessage = await this.executeReasonStep(taskId, emitTrail);
-          break;
-        }
-        
-        responseMessage = await this.selectReplacementReason(taskId, reasonId, emitTrail);
-        break;
-
-      case 'submission':
-        // Handle final confirmation
-        if (lowerMessage === 'yes' || lowerMessage === 'y' || lowerMessage === 'confirm' || lowerMessage === 'submit') {
-          responseMessage = await this.executeSubmission(taskId, emitTrail);
-        } else {
-          responseMessage = `Order cancelled. If you'd like to start over, please let me know.`;
-          this.updateWorkflowState(taskId, { step: 'address' });
-        }
-        break;
-
-      case 'complete':
-        responseMessage = `Your card replacement order has already been submitted. If you need to make changes, please contact customer service.`;
-        break;
-
-      default:
-        // Start from the beginning
-        responseMessage = await this.executeAddressStep(taskId, emitTrail);
+      }
     }
 
     // Update task with response
@@ -586,7 +617,8 @@ export class CardReplacementExecutor implements A2AAgent {
       data: {
         direction: 'agent_to_user',
         message: responseMessage,
-        workflowStep: workflowState.step
+        workflowStep: workflowState.step,
+        fraudFlag: isFraudCase
       }
     });
 
