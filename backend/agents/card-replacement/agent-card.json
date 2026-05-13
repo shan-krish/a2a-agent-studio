@@ -1,0 +1,56 @@
+{
+  "name": "Card Replacement Agent",
+  "description": "Handles the complete card replacement workflow using MCP servers for address confirmation, delivery method selection, replacement reason, and final submission",
+  "url": "http://localhost:4002",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true
+  },
+  "skills": [
+    {
+      "id": "full-replacement-flow",
+      "name": "Full Card Replacement",
+      "description": "Complete card replacement workflow including address, delivery, and reason selection",
+      "tags": ["replacement", "workflow", "complete"],
+      "examples": [
+        "I need to replace my card",
+        "My card was stolen",
+        "I lost my credit card"
+      ]
+    },
+    {
+      "id": "address-confirmation",
+      "name": "Address Confirmation",
+      "description": "Confirm or update mailing address for card shipment",
+      "tags": ["address", "mailing", "shipping"],
+      "examples": [
+        "Confirm my address",
+        "Update my mailing address"
+      ]
+    },
+    {
+      "id": "delivery-method",
+      "name": "Delivery Method",
+      "description": "Select shipping speed for new card",
+      "tags": ["delivery", "shipping", "express"],
+      "examples": [
+        "Choose delivery method",
+        "Send overnight",
+        "Express shipping"
+      ]
+    },
+    {
+      "id": "replacement-reason",
+      "name": "Replacement Reason",
+      "description": "Specify reason for card replacement",
+      "tags": ["reason", "lost", "stolen", "fraud"],
+      "examples": [
+        "Card was stolen",
+        "I lost my card",
+        "Suspected fraud"
+      ]
+    }
+  ],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"]
+}

@@ -1,0 +1,226 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  
+  /* AmEx Custom Colors */
+  --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
+  --color-navy-700: var(--navy-700);
+  --color-navy-600: var(--navy-600);
+  --color-blue-500: var(--blue-500);
+  --color-blue-400: var(--blue-400);
+  --color-blue-300: var(--blue-300);
+  --color-cyan-400: var(--cyan-400);
+  --color-green-400: var(--green-400);
+  --color-amber-400: var(--amber-400);
+  --color-red-400: var(--red-400);
+  --color-purple-400: var(--purple-400);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --radius: 0.625rem;
+}
+
+:root {
+  /* AmEx Navy Palette */
+  --navy-900: #0A1628;
+  --navy-800: #0D2137;
+  --navy-700: #132D4A;
+  --navy-600: #1A3F5C;
+  
+  /* AmEx Blue Accents */
+  --blue-500: #006FCF;
+  --blue-400: #3B8DD4;
+  --blue-300: #6BB5F0;
+  
+  /* Agent Colors */
+  --cyan-400: #00D4FF;
+  --green-400: #00C853;
+  --amber-400: #FFB300;
+  --red-400: #FF3D00;
+  --purple-400: #9D4EDD;
+  
+  /* Base Colors */
+  --background: #0A1628;
+  --foreground: #F5F7FA;
+  --card: #0D2137;
+  --card-foreground: #F5F7FA;
+  --popover: #0D2137;
+  --popover-foreground: #F5F7FA;
+  --primary: #006FCF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #132D4A;
+  --secondary-foreground: #F5F7FA;
+  --muted: #132D4A;
+  --muted-foreground: #8FA3BF;
+  --accent: #1A3F5C;
+  --accent-foreground: #F5F7FA;
+  --destructive: #FF3D00;
+  --border: #1A3F5C;
+  --input: #132D4A;
+  --ring: #006FCF;
+}
+
+.dark {
+  /* Same colors in dark mode */
+  --navy-900: #0A1628;
+  --navy-800: #0D2137;
+  --navy-700: #132D4A;
+  --navy-600: #1A3F5C;
+  
+  --blue-500: #006FCF;
+  --blue-400: #3B8DD4;
+  --blue-300: #6BB5F0;
+  
+  --cyan-400: #00D4FF;
+  --green-400: #00C853;
+  --amber-400: #FFB300;
+  --red-400: #FF3D00;
+  --purple-400: #9D4EDD;
+  
+  --background: #0A1628;
+  --foreground: #F5F7FA;
+  --card: #0D2137;
+  --card-foreground: #F5F7FA;
+  --popover: #0D2137;
+  --popover-foreground: #F5F7FA;
+  --primary: #006FCF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #132D4A;
+  --secondary-foreground: #F5F7FA;
+  --muted: #132D4A;
+  --muted-foreground: #8FA3BF;
+  --accent: #1A3F5C;
+  --accent-foreground: #F5F7FA;
+  --destructive: #FF3D00;
+  --border: #1A3F5C;
+  --input: #132D4A;
+  --ring: #006FCF;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A1628;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1A3F5C;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2A5070;
+}
+
+/* Timeline connector animation */
+@keyframes pulse-connection {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-connection {
+  animation: pulse-connection 2s ease-in-out infinite;
+}
+
+/* Typing indicator */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+
+.typing-dot:nth-child(1) { animation: typing-dot 1.4s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation: typing-dot 1.4s ease-in-out infinite 0.2s; }
+.typing-dot:nth-child(3) { animation: typing-dot 1.4s ease-in-out infinite 0.4s; }
+
+/* Gradient text for AmEx logo style */
+.amex-gradient {
+  background: linear-gradient(135deg, #006FCF 0%, #3B8DD4 50%, #6BB5F0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Status pulse for online agents */
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(0, 200, 83, 0); }
+}
+
+.status-online {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Trail node animations */
+@keyframes node-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trail-node-enter {
+  animation: node-enter 0.3s ease-out;
+}
+
+/* Connection line styles */
+.connection-line {
+  stroke-dasharray: 5, 5;
+  animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+.connection-line-complete {
+  stroke-dasharray: none;
+}

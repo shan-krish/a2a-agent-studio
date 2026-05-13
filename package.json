@@ -1,0 +1,15 @@
+{
+  "name": "a2a-agent-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A2A + MCP Agent Studio — Card Replacement & Charge Verification Demo",
+  "scripts": {
+    "backend": "cd backend && npm run agents",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

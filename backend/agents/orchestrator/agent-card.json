@@ -1,0 +1,35 @@
+{
+  "name": "Orchestrator Agent",
+  "description": "Central routing agent that directs customer requests to specialized agents (Charge Verification or Card Replacement)",
+  "url": "http://localhost:4000",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true
+  },
+  "skills": [
+    {
+      "id": "charge-investigation",
+      "name": "Charge Investigation",
+      "description": "Investigate unrecognized or suspicious charges on the customer's account",
+      "tags": ["charges", "disputes", "investigation"],
+      "examples": [
+        "I don't recognize a charge of $299.99 from TechStore Pro",
+        "There's a charge on my account I didn't make",
+        "Someone used my card without permission"
+      ]
+    },
+    {
+      "id": "card-replacement",
+      "name": "Card Replacement",
+      "description": "Handle card replacement requests due to loss, theft, damage, or fraud",
+      "tags": ["card", "replacement", "lost", "stolen"],
+      "examples": [
+        "I lost my credit card",
+        "My card was stolen",
+        "I need a new card"
+      ]
+    }
+  ],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "Charge Verification Agent",
+  "description": "Investigates unrecognized or suspicious charges on customer accounts and handles disputes",
+  "url": "http://localhost:4001",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true
+  },
+  "skills": [
+    {
+      "id": "charge-lookup",
+      "name": "Charge Lookup",
+      "description": "Look up charge details from transaction history",
+      "tags": ["lookup", "transaction", "history"],
+      "examples": [
+        "Look up the charge for $299.99",
+        "What charges do I have from TechStore Pro?",
+        "Find recent transactions"
+      ]
+    },
+    {
+      "id": "charge-dispute",
+      "name": "Charge Dispute",
+      "description": "Handle dispute process for unrecognized charges",
+      "tags": ["dispute", "unrecognized", "chargeback"],
+      "examples": [
+        "I want to dispute this charge",
+        "I didn't make this purchase",
+        "This charge is unauthorized"
+      ]
+    },
+    {
+      "id": "card-replacement-delegation",
+      "name": "Card Replacement Delegation",
+      "description": "Delegate to Card Replacement Agent when fraud is suspected",
+      "tags": ["delegation", "replacement", "fraud"],
+      "examples": [
+        "I need a new card",
+        "Replace my card because of fraud"
+      ]
+    }
+  ],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"]
+}
