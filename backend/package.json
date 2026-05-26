@@ -2,20 +2,18 @@
   "name": "a2a-agent-studio-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "A2A Agent Studio - Backend orchestrator. No dependencies here, just scripts.",
+  "description": "A2A Agent Studio backend script runner. Root package intentionally has zero dependencies.",
   "scripts": {
-    "install:all": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install && cd ../../mcp-servers && npm install && cd ../agent-platform && npm install",
+    "install:all": "sh scripts/install-all.sh",
     "install:agents": "cd agents/ava && npm install && cd ../charge-verification && npm install && cd ../card-replacement && npm install",
+    "install:mcp": "cd mcp-servers && npm install",
     "install:platform": "cd agent-platform && npm install",
     "start:ava": "cd agents/ava && npm start",
     "start:charge-verification": "cd agents/charge-verification && npm start",
     "start:card-replacement": "cd agents/card-replacement && npm start",
-    "start:agents": "npx concurrently \"npm run start:ava\" \"npm run start:charge-verification\" \"npm run start:card-replacement\"",
-    "start:mcp": "cd mcp-servers && npx tsx server.ts",
+    "start:mcp": "cd mcp-servers && npm start",
     "start:platform": "cd agent-platform && npm start",
-    "start:all": "npx concurrently \"npm run start:agents\" \"npm run start:mcp\" \"npm run start:platform\""
-  },
-  "devDependencies": {
-    "concurrently": "^9.0.0"
+    "start:all": "sh scripts/start-all.sh",
+    "check:all": "sh scripts/check-all.sh"
   }
 }
